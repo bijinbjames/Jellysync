@@ -14,4 +14,24 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
+config.resolver.sourceExts = ['ts', 'tsx', 'js', 'jsx', 'json', 'cjs', 'mjs'];
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // Resolve .js imports to .ts/.tsx files (for nodenext/node16 moduleResolution)
+  if (moduleName.endsWith('.js')) {
+    const tsName = moduleName.replace(/\.js$/, '.ts');
+    try {
+      return context.resolveRequest(context, tsName, platform);
+    } catch {
+      // fall through to default resolution
+    }
+    const tsxName = moduleName.replace(/\.js$/, '.tsx');
+    try {
+      return context.resolveRequest(context, tsxName, platform);
+    } catch {
+      // fall through to default resolution
+    }
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
+
 module.exports = withNativeWind(config, { input: './global.css' });
