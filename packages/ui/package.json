@@ -9,14 +9,18 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
-    }
+    },
+    "./theme.css": "./src/theme.css",
+    "./utilities.css": "./src/utilities.css"
   },
   "scripts": {
     "build": "tsc",
     "lint": "eslint .",
+    "test": "vitest run --config vitest.config.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "~5.8.0"
+    "typescript": "~5.8.0",
+    "vitest": "^4.1.0"
   }
 }

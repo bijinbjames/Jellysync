@@ -1,6 +1,6 @@
 # Story 1.2: Design System Token Implementation
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -23,48 +23,48 @@ So that all screens across mobile and web render with consistent visual identity
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Define design tokens in packages/ui (AC: #1, #2, #3, #4)
-  - [ ] 1.1 Create `packages/ui/src/tokens/colors.ts` — export all 16 color tokens as a typed object
-  - [ ] 1.2 Create `packages/ui/src/tokens/typography.ts` — export font families, weights, sizes, letter-spacing for all 6 roles
-  - [ ] 1.3 Create `packages/ui/src/tokens/spacing.ts` — export 7-token spacing scale
-  - [ ] 1.4 Create `packages/ui/src/tokens/radius.ts` — export corner radius tokens
-  - [ ] 1.5 Create `packages/ui/src/tokens/index.ts` — barrel export all token modules
-  - [ ] 1.6 Update `packages/ui/src/index.ts` to re-export tokens
+- [x] Task 1: Define design tokens in packages/ui (AC: #1, #2, #3, #4)
+  - [x] 1.1 Create `packages/ui/src/tokens/colors.ts` — export all 16 color tokens as a typed object
+  - [x] 1.2 Create `packages/ui/src/tokens/typography.ts` — export font families, weights, sizes, letter-spacing for all 6 roles
+  - [x] 1.3 Create `packages/ui/src/tokens/spacing.ts` — export 7-token spacing scale
+  - [x] 1.4 Create `packages/ui/src/tokens/radius.ts` — export corner radius tokens
+  - [x] 1.5 Create `packages/ui/src/tokens/index.ts` — barrel export all token modules
+  - [x] 1.6 Update `packages/ui/src/index.ts` to re-export tokens
 
-- [ ] Task 2: Create shared Tailwind preset (AC: #5, #8)
-  - [ ] 2.1 Create `packages/ui/src/tailwind-preset.ts` — Tailwind preset extending theme with all tokens (colors, typography, spacing, borderRadius)
-  - [ ] 2.2 Add glassmorphism utility plugin: `glass` class applying `background: rgba(surface_variant, 0.6)` + `backdrop-filter: blur(20px)` + `border: 1px solid rgba(outline_variant, 0.15)`
-  - [ ] 2.3 Add glow CTA utility: `gradient-primary` class applying 135deg gradient from primary to primary_container
-  - [ ] 2.4 Export preset from `packages/ui/src/index.ts` and add tailwind preset export path to `packages/ui/package.json`
+- [x] Task 2: Create shared Tailwind CSS theme and preset (AC: #5, #8)
+  - [x] 2.1 Create `packages/ui/src/theme.css` — Tailwind v4 `@theme` block defining all design tokens as CSS custom properties (colors, font families, spacing, border-radius)
+  - [x] 2.2 Create `packages/ui/src/utilities.css` — custom utility classes: `.glass` (glassmorphism: `rgba(surface_container, 0.6)` + `backdrop-filter: blur(20px)` + ghost border), `.gradient-primary` (135deg gradient from primary to primary_container)
+  - [x] 2.3 Update `packages/ui/src/index.ts` to re-export token TypeScript modules (for programmatic access)
+  - [x] 2.4 Update `packages/ui/package.json` exports to include CSS files (theme.css, utilities.css) and TS token modules
 
-- [ ] Task 3: Configure NativeWind v5 for mobile app (AC: #6)
-  - [ ] 3.1 Install NativeWind v5, its peer dependencies, and required Expo config plugins in apps/mobile
-  - [ ] 3.2 Create `apps/mobile/tailwind.config.ts` consuming the shared preset from @jellysync/ui
-  - [ ] 3.3 Configure Metro bundler for NativeWind (metro.config.js with `withNativeWind` wrapper)
-  - [ ] 3.4 Add NativeWind babel preset or SWC plugin as required by v5
-  - [ ] 3.5 Wrap root app component with NativeWind StyleSheet provider if required
-  - [ ] 3.6 Verify a test component renders with token-based Tailwind classes (e.g., `bg-surface text-on-surface`)
+- [x] Task 3: Configure NativeWind v5 for mobile app (AC: #6)
+  - [x] 3.1 Install NativeWind v5 preview + peers: `npx expo install nativewind@preview react-native-css react-native-reanimated react-native-safe-area-context` and dev deps `tailwindcss @tailwindcss/postcss postcss`
+  - [x] 3.2 Create `apps/mobile/global.css` with individual Tailwind imports (theme.css, preflight.css, utilities.css), `nativewind/theme`, then `@import` the shared theme.css from @jellysync/ui
+  - [x] 3.3 Create `apps/mobile/postcss.config.mjs` with `@tailwindcss/postcss` plugin
+  - [x] 3.4 Create `apps/mobile/metro.config.js` using `withNativeWind(config, { input: "./global.css" })`
+  - [x] 3.5 Import `"./global.css"` in the root App component
+  - [x] 3.6 Verify a test component renders with token-based Tailwind classes (e.g., `bg-surface text-on-surface`)
 
-- [ ] Task 4: Configure Tailwind CSS v4 for web app (AC: #7)
-  - [ ] 4.1 Install Tailwind CSS v4, @tailwindcss/vite plugin in apps/web
-  - [ ] 4.2 Create `apps/web/tailwind.config.ts` consuming the shared preset from @jellysync/ui
-  - [ ] 4.3 Configure Vite plugin for Tailwind CSS v4 in `apps/web/vite.config.ts`
-  - [ ] 4.4 Update `apps/web/src/index.css` with Tailwind v4 `@import "tailwindcss"` and any theme overrides
-  - [ ] 4.5 Verify a test component renders with token-based Tailwind classes
+- [x] Task 4: Configure Tailwind CSS v4 for web app (AC: #7)
+  - [x] 4.1 Install `tailwindcss` and `@tailwindcss/vite` in apps/web
+  - [x] 4.2 Add `@tailwindcss/vite` plugin to `apps/web/vite.config.ts`
+  - [x] 4.3 Update `apps/web/src/index.css` with `@import "tailwindcss"`, then `@import` the shared theme.css and utilities.css from @jellysync/ui
+  - [x] 4.4 Add `@source` directive pointing to `../../packages/ui/src/**/*.{ts,tsx}` for class scanning
+  - [x] 4.5 Verify a test component renders with token-based Tailwind classes
 
-- [ ] Task 5: Load custom fonts on both platforms (AC: #9)
-  - [ ] 5.1 Install `expo-font` and `@expo-google-fonts/manrope` + `@expo-google-fonts/inter` in apps/mobile
-  - [ ] 5.2 Create font loading hook or setup in apps/mobile (useFonts with splash screen hold until loaded)
-  - [ ] 5.3 Download Manrope and Inter font files for web (or use Google Fonts CDN) in apps/web
-  - [ ] 5.4 Add @font-face declarations in `apps/web/src/index.css` for Manrope (700, 800) and Inter (400, 500, 600)
-  - [ ] 5.5 Configure Tailwind preset font families to reference correct font names per platform
+- [x] Task 5: Load custom fonts on both platforms (AC: #9)
+  - [x] 5.1 Install `expo-font`, `expo-splash-screen`, `@expo-google-fonts/manrope`, and `@expo-google-fonts/inter` in apps/mobile
+  - [x] 5.2 Create font loading in apps/mobile root component using `useFonts` hook with `SplashScreen.preventAutoHideAsync()` to hold splash until fonts load, then `SplashScreen.hideAsync()`. Load: Manrope_700Bold, Manrope_800ExtraBold, Inter_400Regular, Inter_500Medium, Inter_600SemiBold
+  - [x] 5.3 Download Manrope and Inter woff2 font files for web into `apps/web/public/fonts/` (or use Google Fonts CDN)
+  - [x] 5.4 Add @font-face declarations in `apps/web/src/index.css` for Manrope (700, 800) and Inter (400, 500, 600) with `font-display: swap`
+  - [x] 5.5 Configure `@theme` font families — on native, ensure registered font names match expo-font names (e.g., `Manrope_700Bold`)
 
-- [ ] Task 6: Verify complete design system integration (AC: #1-10)
-  - [ ] 6.1 Create a token showcase component in apps/web showing all colors, typography roles, spacing, and radius
-  - [ ] 6.2 Verify glassmorphism utility renders correctly on web (backdrop-filter support)
-  - [ ] 6.3 Verify no #FFFFFF exists in any token definition — on_surface (#e5e2e1) is the max brightness
-  - [ ] 6.4 Run `pnpm build` and `pnpm lint` — ensure no errors across all workspaces
-  - [ ] 6.5 Run `pnpm test` — ensure existing tests still pass (no regressions)
+- [x] Task 6: Verify complete design system integration (AC: #1-10)
+  - [x] 6.1 Create a token showcase component in apps/web showing all colors, typography roles, spacing, and radius
+  - [x] 6.2 Verify glassmorphism utility renders correctly on web (backdrop-filter support)
+  - [x] 6.3 Verify no #FFFFFF exists in any token definition — on_surface (#e5e2e1) is the max brightness
+  - [x] 6.4 Run `pnpm build` and `pnpm lint` — ensure no errors across all workspaces
+  - [x] 6.5 Run `pnpm test` — ensure existing tests still pass (no regressions)
 
 ## Dev Notes
 
@@ -202,9 +202,9 @@ Then import `"../global.css"` in the root layout/App component.
 
 ### Tailwind CSS v4 Configuration (Web)
 
-Tailwind CSS v4 has a new configuration approach:
-- CSS-first configuration using `@theme` blocks in CSS
-- Can still use `tailwind.config.ts` for JS-based presets
+Tailwind CSS v4.1 (stable) uses a **CSS-first configuration** approach:
+- Design tokens defined via `@theme` blocks in CSS (replaces `tailwind.config.js`)
+- JS-based presets still supported but CSS `@theme` is the recommended path
 - Vite integration via `@tailwindcss/vite` plugin
 
 ```bash
@@ -212,7 +212,29 @@ cd apps/web
 pnpm add tailwindcss @tailwindcss/vite
 ```
 
-The shared preset from `@jellysync/ui` should work with both platforms through the standard Tailwind preset API.
+**Shared Token Strategy:** The recommended approach for sharing tokens between web (Tailwind v4) and mobile (NativeWind v5) is a **shared CSS preset file** using `@theme` directives. Both platforms consume the same CSS file:
+
+```css
+/* packages/ui/src/theme.css — shared design tokens */
+@theme {
+  --color-primary: #6ee9e0;
+  --color-primary-container: #4ecdc4;
+  --color-secondary: #c8bfff;
+  /* ... all tokens ... */
+  --font-display: "Manrope", sans-serif;
+  --font-body: "Inter", sans-serif;
+}
+```
+
+Web app imports it: `@import "../../packages/ui/src/theme.css";`
+Mobile app imports it in global.css after the NativeWind imports.
+
+For monorepos, add `@source` directives to tell Tailwind where to scan for class usage:
+```css
+@source "../../packages/ui/src/**/*.{ts,tsx}";
+```
+
+**Important decision:** The token TypeScript files (`packages/ui/src/tokens/*.ts`) remain the source of truth for programmatic access. The CSS `@theme` file and the TS token files must stay in sync. Consider generating one from the other or maintaining both carefully.
 
 ### Previous Story Intelligence (Story 1.1)
 
@@ -253,29 +275,28 @@ packages/ui/
 packages/ui/
   src/
     tokens/
-      colors.ts           # 16 color token definitions
+      colors.ts           # 16 color token definitions (TypeScript, programmatic access)
       typography.ts        # Font families, weights, sizes, roles
       spacing.ts           # 7-token spacing scale
       radius.ts            # Corner radius tokens
       index.ts             # Barrel export
-    tailwind-preset.ts     # Shared Tailwind preset consuming all tokens
-    index.ts               # Updated: re-exports tokens + preset
-  package.json             # Updated: exports field for preset
+    theme.css              # Shared @theme block — CSS custom properties for Tailwind v4/NativeWind v5
+    utilities.css          # Custom utility classes (glass, gradient-primary)
+    index.ts               # Updated: re-exports tokens
+  package.json             # Updated: exports field for CSS + TS
 
 apps/mobile/
-  tailwind.config.ts       # NEW: Consumes @jellysync/ui preset
-  metro.config.js          # NEW or MODIFIED: withNativeWind wrapper
-  babel.config.js          # MODIFIED: NativeWind babel preset (if needed)
-  app.json                 # MODIFIED: expo-font config plugin (if needed)
-  App.tsx                  # MODIFIED: Font loading + NativeWind provider
-  package.json             # MODIFIED: +nativewind, +tailwindcss, +expo-font, +@expo-google-fonts/*
+  global.css               # NEW: NativeWind v5 imports + shared theme.css
+  metro.config.js          # NEW: withNativeWind wrapper
+  postcss.config.mjs       # NEW: @tailwindcss/postcss plugin
+  App.tsx                  # MODIFIED: Font loading + global.css import
+  package.json             # MODIFIED: +nativewind@preview, +react-native-css, +react-native-reanimated, +expo-font, +@expo-google-fonts/*
 
 apps/web/
-  tailwind.config.ts       # NEW: Consumes @jellysync/ui preset
   vite.config.ts           # MODIFIED: +@tailwindcss/vite plugin
   src/
-    index.css              # MODIFIED: Tailwind v4 imports + @font-face
-  public/fonts/            # NEW: Manrope + Inter font files (if self-hosting)
+    index.css              # MODIFIED: @import "tailwindcss" + shared theme.css + @font-face
+  public/fonts/            # NEW: Manrope + Inter woff2 files (if self-hosting)
   package.json             # MODIFIED: +tailwindcss, +@tailwindcss/vite
 ```
 
@@ -300,10 +321,53 @@ apps/web/
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Task 1: Created all 4 token modules (colors, typography, spacing, radius) with barrel exports. Added vitest config and 16 passing tests. All token values match spec exactly.
+- Task 2: Created theme.css with @theme block (all 16 colors, font families, spacing, radius as CSS custom properties). Created utilities.css with glass and gradient-primary utility classes. Updated package.json exports.
+- Task 3: Installed NativeWind v5 preview + peers (nativewind@5.0.0-preview.3, react-native-css, react-native-reanimated@4.2.1, react-native-safe-area-context, tailwindcss@4.2.2, @tailwindcss/postcss, postcss). Created global.css, postcss.config.mjs, updated metro.config.js with withNativeWind. Updated App.tsx to use token-based className props.
+- Task 4: Installed tailwindcss@4.2.2 and @tailwindcss/vite for web. Added @tailwindcss/vite plugin to vite.config.ts. Updated index.css with Tailwind imports, shared theme/utilities via package exports, and @source directive. Vite build succeeds.
+- Task 5: Installed expo-font, expo-splash-screen, @expo-google-fonts/manrope, @expo-google-fonts/inter. Updated App.tsx with useFonts hook and SplashScreen integration. Downloaded Manrope (700, 800) and Inter (400, 500, 600) woff2 files to apps/web/public/fonts/. Added @font-face declarations with font-display: swap.
+- Task 6: Created TokenShowcase component showing all colors, typography, spacing, radius, glassmorphism, and gradient-primary. Verified no #FFFFFF in tokens. pnpm build, pnpm lint, pnpm test all pass with 0 errors. 17 total tests (16 new UI + 1 existing shared).
+
+### Change Log
+
+- 2026-03-22: Implemented complete design system tokens — all 16 colors, 6 typography roles, 7 spacing tokens, 3 radius tokens. Created shared CSS theme (theme.css) and utilities (utilities.css) for Tailwind v4/NativeWind v5 consumption. Configured NativeWind v5 for mobile with expo-font loading. Configured Tailwind CSS v4 for web with @font-face declarations. Built token showcase component for visual verification.
+- 2026-03-22: Code review fixes — Fixed invalid Tailwind spacing class names in TokenShowcase (p-spacing-6 → p-6 etc.), registered fonts under base family names (Manrope/Inter) for NativeWind resolution, replaced onLayout splash hide with useEffect + fontError handling to prevent splash freeze, changed splash backgroundColor from #ffffff to #131313, changed userInterfaceStyle from light to dark.
+
 ### File List
+
+- packages/ui/src/tokens/colors.ts (new)
+- packages/ui/src/tokens/typography.ts (new)
+- packages/ui/src/tokens/spacing.ts (new)
+- packages/ui/src/tokens/radius.ts (new)
+- packages/ui/src/tokens/index.ts (new)
+- packages/ui/src/tokens/colors.test.ts (new)
+- packages/ui/src/tokens/typography.test.ts (new)
+- packages/ui/src/tokens/spacing.test.ts (new)
+- packages/ui/src/tokens/radius.test.ts (new)
+- packages/ui/src/index.ts (modified)
+- packages/ui/package.json (modified)
+- packages/ui/vitest.config.ts (new)
+- packages/ui/src/theme.css (new)
+- packages/ui/src/utilities.css (new)
+- apps/mobile/global.css (new)
+- apps/mobile/postcss.config.mjs (new)
+- apps/mobile/metro.config.js (modified)
+- apps/mobile/App.tsx (modified)
+- apps/mobile/package.json (modified)
+- apps/web/vite.config.ts (modified)
+- apps/web/src/index.css (modified)
+- apps/web/package.json (modified)
+- apps/web/public/fonts/Manrope-Bold.woff2 (new)
+- apps/web/public/fonts/Manrope-ExtraBold.woff2 (new)
+- apps/web/public/fonts/Inter-Regular.woff2 (new)
+- apps/web/public/fonts/Inter-Medium.woff2 (new)
+- apps/web/public/fonts/Inter-SemiBold.woff2 (new)
+- apps/web/src/App.tsx (modified)
+- apps/web/src/App.css (unchanged, no longer imported)
+- apps/web/src/TokenShowcase.tsx (new)
