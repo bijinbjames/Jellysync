@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx bmad-method:*)",
+      "WebSearch",
+      "Bash(npm create:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm --filter @jellysync/mobile update react)",
+      "Bash(pnpm --filter @jellysync/web update react react-dom)"
+    ]
+  }
+}

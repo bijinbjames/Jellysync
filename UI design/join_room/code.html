@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>JellySync - Join Room</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "error-container": "#93000a",
+              "inverse-on-surface": "#313030",
+              "surface-container-low": "#1c1b1b",
+              "tertiary": "#ffcbac",
+              "primary-fixed": "#7cf6ec",
+              "on-tertiary": "#512400",
+              "secondary-fixed-dim": "#c8bfff",
+              "inverse-primary": "#006a65",
+              "secondary": "#c8bfff",
+              "on-primary": "#003734",
+              "on-primary-fixed-variant": "#00504c",
+              "on-error-container": "#ffdad6",
+              "surface-container": "#201f1f",
+              "primary-container": "#4ecdc4",
+              "surface": "#131313",
+              "surface-container-high": "#2a2a2a",
+              "on-tertiary-fixed-variant": "#733600",
+              "surface-variant": "#353534",
+              "on-surface-variant": "#bcc9c7",
+              "secondary-fixed": "#e5deff",
+              "error": "#ffb4ab",
+              "outline": "#869391",
+              "outline-variant": "#3d4948",
+              "on-secondary-fixed": "#190064",
+              "on-tertiary-fixed": "#311300",
+              "on-secondary-container": "#b6abff",
+              "on-secondary-fixed-variant": "#442bb5",
+              "secondary-container": "#442bb5",
+              "surface-container-lowest": "#0e0e0e",
+              "on-tertiary-container": "#783901",
+              "primary-fixed-dim": "#5dd9d0",
+              "on-secondary": "#2d009d",
+              "on-surface": "#e5e2e1",
+              "tertiary-container": "#ffa568",
+              "on-error": "#690005",
+              "surface-dim": "#131313",
+              "tertiary-fixed-dim": "#ffb688",
+              "on-primary-container": "#00544f",
+              "surface-container-highest": "#353534",
+              "surface-bright": "#3a3939",
+              "background": "#131313",
+              "on-primary-fixed": "#00201e",
+              "surface-tint": "#5dd9d0",
+              "inverse-surface": "#e5e2e1",
+              "on-background": "#e5e2e1",
+              "primary": "#6ee9e0",
+              "tertiary-fixed": "#ffdbc7"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(53, 53, 52, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .otp-input:focus {
+            outline: none;
+            border: 2px solid #6ee9e0;
+            background: rgba(78, 205, 196, 0.1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest text-on-surface font-body min-h-screen flex flex-col">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface/60 backdrop-blur-xl flex items-center justify-between px-6 py-4">
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-white/5 rounded-full transition-colors active:scale-90 duration-200">
+<span class="material-symbols-outlined text-on-surface">arrow_back</span>
+</button>
+<h1 class="text-xl font-headline font-bold tracking-tight text-on-surface">Join Room</h1>
+</div>
+<div class="w-10"></div> <!-- Spacer for symmetry -->
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col items-center justify-center px-6 pt-24 pb-12 w-full max-w-md mx-auto">
+<!-- Instructional Header -->
+<div class="text-center mb-10">
+<div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+<span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">group_add</span>
+</div>
+<h2 class="text-2xl font-headline font-extrabold text-on-surface mb-2">Enter Room Code</h2>
+<p class="text-on-surface-variant text-sm">Ask the host for the 6-digit access code</p>
+</div>
+<!-- Room Code Input Section -->
+<div class="flex gap-2 mb-10">
+<!-- Individual Code Boxes -->
+<div class="w-12 h-14 bg-surface-container-high rounded-md flex items-center justify-center border-2 border-transparent focus-within:border-primary transition-all">
+<input class="w-full h-full bg-transparent text-center text-2xl font-mono font-bold text-primary focus:outline-none" maxlength="1" type="text" value="J"/>
+</div>
+<div class="w-12 h-14 bg-surface-container-high rounded-md flex items-center justify-center border-2 border-transparent focus-within:border-primary transition-all">
+<input class="w-full h-full bg-transparent text-center text-2xl font-mono font-bold text-primary focus:outline-none" maxlength="1" type="text" value="E"/>
+</div>
+<div class="w-12 h-14 bg-surface-container-high rounded-md flex items-center justify-center border-2 border-transparent focus-within:border-primary transition-all">
+<input class="w-full h-full bg-transparent text-center text-2xl font-mono font-bold text-primary focus:outline-none" maxlength="1" type="text" value="L"/>
+</div>
+<div class="w-12 h-14 bg-surface-container-high rounded-md flex items-center justify-center border-2 border-transparent focus-within:border-primary transition-all">
+<input class="w-full h-full bg-transparent text-center text-2xl font-mono font-bold text-primary focus:outline-none" maxlength="1" placeholder="·" type="text"/>
+</div>
+<div class="w-12 h-14 bg-surface-container-high rounded-md flex items-center justify-center border-2 border-transparent focus-within:border-primary transition-all">
+<input class="w-full h-full bg-transparent text-center text-2xl font-mono font-bold text-primary focus:outline-none" maxlength="1" placeholder="·" type="text"/>
+</div>
+<div class="w-12 h-14 bg-surface-container-high rounded-md flex items-center justify-center border-2 border-transparent focus-within:border-primary transition-all">
+<input class="w-full h-full bg-transparent text-center text-2xl font-mono font-bold text-primary focus:outline-none" maxlength="1" placeholder="·" type="text"/>
+</div>
+</div>
+<!-- Join Button -->
+<button class="w-full py-4 bg-gradient-to-br from-primary to-primary-container rounded-md font-bold text-on-primary-container shadow-lg active:scale-[0.98] transition-transform mb-8">
+            Join Room
+        </button>
+<!-- Divider -->
+<div class="w-full flex items-center gap-4 mb-8">
+<div class="flex-1 h-[1px] bg-outline-variant/30"></div>
+<span class="text-xs font-label uppercase tracking-widest text-on-surface-variant">or</span>
+<div class="flex-1 h-[1px] bg-outline-variant/30"></div>
+</div>
+<!-- Muted Suggestion -->
+<div class="flex flex-col items-center gap-2">
+<p class="text-on-surface-variant text-sm text-center">Tap a shared link to join instantly</p>
+<button class="text-primary text-sm font-semibold hover:underline">Open Invite Link</button>
+</div>
+</main>
+<!-- Visual Keyboard Simulation (Mobile Focus) -->
+<div class="mt-auto w-full bg-surface-container-high p-2 grid grid-cols-10 gap-1 rounded-t-xl md:hidden">
+<!-- Row 1 -->
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">Q</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">W</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">E</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">R</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">T</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">Y</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">U</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">I</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">O</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">P</button>
+<!-- Row 2 -->
+<div class="col-span-1"></div>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">A</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">S</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">D</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">F</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">G</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">H</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">J</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">K</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">L</button>
+<!-- Row 3 -->
+<button class="col-span-1.5 aspect-[3/2] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">
+<span class="material-symbols-outlined text-xs">shift</span>
+</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">Z</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">X</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">C</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">V</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">B</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">N</button>
+<button class="aspect-[3/4] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">M</button>
+<button class="col-span-1.5 aspect-[3/2] bg-surface-variant rounded flex items-center justify-center text-sm font-semibold">
+<span class="material-symbols-outlined text-xs">backspace</span>
+</button>
+<!-- Bottom Row -->
+<button class="col-span-2 py-3 bg-surface-variant rounded text-xs font-bold">123</button>
+<button class="col-span-6 py-3 bg-surface-variant rounded text-xs font-bold">space</button>
+<button class="col-span-2 py-3 bg-primary/20 text-primary rounded text-xs font-bold">GO</button>
+</div>
+</body></html>

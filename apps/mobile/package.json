@@ -1,0 +1,27 @@
+{
+  "name": "@jellysync/mobile",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "dev": "expo start",
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@jellysync/shared": "workspace:*",
+    "@jellysync/ui": "workspace:*",
+    "expo": "~55.0.8",
+    "expo-dev-client": "~5.1.3",
+    "expo-status-bar": "~55.0.4",
+    "react": "^19.2.4",
+    "react-native": "0.83.2"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~5.8.0"
+  },
+  "private": true
+}
