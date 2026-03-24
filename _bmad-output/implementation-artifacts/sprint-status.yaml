@@ -48,7 +48,7 @@ development_status:
   1-2-design-system-token-implementation: done
   1-3-jellyfin-authentication-flow: done
   1-4-home-hub-screen: done
-  1-5-user-logout: backlog
+  1-5-user-logout: review
   epic-1-retrospective: optional
 
   # Epic 2: Room Creation & Joining

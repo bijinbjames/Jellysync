@@ -5,17 +5,11 @@ inputDocuments:
   - _bmad-output/planning-artifacts/product-brief-myapp-2026-03-22.md
   - DESIGN.md
   - UI design/jellysync_midnight/DESIGN.md
-  - UI design/home_hub/code.html
   - UI design/home_hub/screen.png
-  - UI design/full_screen_player/code.html
   - UI design/full_screen_player/screen.png
-  - UI design/join_room/code.html
   - UI design/join_room/screen.png
-  - UI design/library_browser/code.html
   - UI design/library_browser/screen.png
-  - UI design/room_lobby/code.html
   - UI design/room_lobby/screen.png
-  - UI design/login_setup/code.html
   - UI design/login_setup/screen.png
 ---
 

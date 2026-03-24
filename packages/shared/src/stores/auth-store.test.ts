@@ -100,7 +100,56 @@ describe('createAuthStore', () => {
     const state = store.getState();
     expect(state.serverUrl).toBeNull();
     expect(state.token).toBeNull();
+    expect(state.userId).toBeNull();
+    expect(state.username).toBeNull();
     expect(state.isAuthenticated).toBe(false);
+    expect(state.isLoading).toBe(false);
+    expect(state.error).toBeNull();
+    expect(state.errorField).toBeNull();
+  });
+
+  it('should update persist storage on logout', async () => {
+    vi.mocked(authenticateWithJellyfin).mockResolvedValue({
+      token: 'test-token',
+      userId: 'user-123',
+      serverUrl: 'https://jellyfin.example.com',
+      username: 'testuser',
+    });
+
+    const store = createAuthStore(mockStorage);
+    await store.getState().login('https://jellyfin.example.com', 'testuser', 'password');
+
+    vi.mocked(mockStorage.setItem).mockClear();
+    store.getState().logout();
+
+    expect(mockStorage.setItem).toHaveBeenCalledWith(
+      'jellysync-auth',
+      expect.stringContaining('"isAuthenticated":false'),
+    );
+  });
+
+  it('should invalidate pending login on logout', async () => {
+    let resolveLogin: (value: unknown) => void;
+    const loginPromise = new Promise((resolve) => { resolveLogin = resolve; });
+    vi.mocked(authenticateWithJellyfin).mockReturnValue(loginPromise as Promise<Awaited<ReturnType<typeof authenticateWithJellyfin>>>);
+
+    const store = createAuthStore(mockStorage);
+    const loginCall = store.getState().login('https://jellyfin.example.com', 'testuser', 'password');
+
+    store.getState().logout();
+
+    resolveLogin!({
+      token: 'stale-token',
+      userId: 'user-123',
+      serverUrl: 'https://jellyfin.example.com',
+      username: 'testuser',
+    });
+
+    await loginCall;
+
+    const state = store.getState();
+    expect(state.isAuthenticated).toBe(false);
+    expect(state.token).toBeNull();
   });
 
   it('should set hydration flag', () => {

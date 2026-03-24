@@ -6,7 +6,23 @@
       "Bash(npm create:*)",
       "Bash(pnpm install:*)",
       "Bash(pnpm --filter @jellysync/mobile update react)",
-      "Bash(pnpm --filter @jellysync/web update react react-dom)"
+      "Bash(pnpm --filter @jellysync/web update react react-dom)",
+      "Bash(find /home/bijin/myapp/apps/mobile -maxdepth 2 -name *.tsx -o -name *.ts)",
+      "Bash(pnpm test:*)",
+      "Bash(curl -sH \"User-Agent: Mozilla/5.0 \\(X11; Linux x86_64\\) AppleWebKit/537.36 Chrome/120.0.0.0\" \"https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600&display=swap\")",
+      "Bash(rm -f *.woff2)",
+      "Bash(curl -sL \"https://fonts.gstatic.com/s/manrope/v20/xn7gYHE41ni1AdIRggexSg.woff2\" -o Manrope-Bold.woff2)",
+      "Bash(curl -sL \"https://fonts.gstatic.com/s/manrope/v20/xn7gYHE41ni1AdIRggexSg.woff2\" -o Manrope-ExtraBold.woff2)",
+      "Bash(curl -sL \"https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2\" -o Inter-Regular.woff2)",
+      "Bash(curl -sL \"https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2\" -o Inter-Medium.woff2)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\(''''exports'''', {}\\), indent=2\\)\\)\")",
+      "Bash(npx expo:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(find /home/bijin/myapp/packages/shared/src -type f -name *.ts -o -name *.tsx)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

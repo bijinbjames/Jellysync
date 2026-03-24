@@ -9,6 +9,7 @@ import { CodeInput } from '../src/shared/components/code-input';
 export default function HomeScreen() {
   const username = useStore(authStore, (s) => s.username);
   const serverUrl = useStore(authStore, (s) => s.serverUrl);
+  const logout = useStore(authStore, (s) => s.logout);
   const router = useRouter();
 
   const handleCreateRoom = () => {
@@ -28,6 +29,7 @@ export default function HomeScreen() {
         variant="home"
         title={`Hey, ${username ?? 'User'}`}
         subtitle={serverUrl ?? 'Not connected'}
+        onAction={logout}
       />
       <ScrollView
         className="flex-1"

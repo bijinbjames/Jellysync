@@ -8,6 +8,7 @@ import { CodeInput } from '../shared/components/code-input';
 export default function HomePage() {
   const username = useStore(authStore, (s) => s.username);
   const serverUrl = useStore(authStore, (s) => s.serverUrl);
+  const logout = useStore(authStore, (s) => s.logout);
   const navigate = useNavigate();
 
   const handleCreateRoom = () => {
@@ -26,6 +27,7 @@ export default function HomePage() {
         variant="home"
         title={`Hey, ${username ?? 'User'}`}
         subtitle={serverUrl ?? 'Not connected'}
+        onAction={logout}
       />
       <main className="px-6 md:px-12 pt-8 pb-12 max-w-screen-xl mx-auto">
         <h2 className="text-on-surface font-display text-3xl font-bold mb-8 tracking-tight">

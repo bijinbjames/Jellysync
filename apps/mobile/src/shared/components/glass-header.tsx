@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 
 type GlassHeaderVariant = 'home' | 'navigation' | 'branded';
 
@@ -6,10 +6,12 @@ interface GlassHeaderProps {
   variant: GlassHeaderVariant;
   title: string;
   subtitle?: string;
+  onAction?: () => void;
+  actionLabel?: string;
 }
 
 export function GlassHeader(props: GlassHeaderProps) {
-  const { title, subtitle } = props;
+  const { title, subtitle, onAction, actionLabel = 'Log out' } = props;
 
   return (
     <View
@@ -31,6 +33,27 @@ export function GlassHeader(props: GlassHeaderProps) {
             </Text>
           )}
         </View>
+        {onAction && (
+          <Pressable
+            onPress={onAction}
+            accessibilityLabel={actionLabel}
+            accessibilityRole="button"
+            className="w-12 h-12 items-center justify-center rounded-full"
+          >
+            {({ pressed }) => (
+              <View className={`w-6 h-6 items-center justify-center ${pressed ? 'opacity-70' : ''}`}>
+                {/* Door frame */}
+                <View className={`absolute left-0 top-0 w-3.5 h-6 border-l-2 border-t-2 border-b-2 rounded-l ${pressed ? 'border-on-surface' : 'border-on-surface-variant'}`} />
+                {/* Arrow shaft */}
+                <View className={`absolute right-0.5 top-1/2 w-3.5 h-0.5 -translate-y-px ${pressed ? 'bg-on-surface' : 'bg-on-surface-variant'}`} />
+                {/* Arrow head top */}
+                <View className={`absolute right-0 top-1.5 w-2 h-0.5 rotate-45 origin-right ${pressed ? 'bg-on-surface' : 'bg-on-surface-variant'}`} />
+                {/* Arrow head bottom */}
+                <View className={`absolute right-0 bottom-1.5 w-2 h-0.5 -rotate-45 origin-right ${pressed ? 'bg-on-surface' : 'bg-on-surface-variant'}`} />
+              </View>
+            )}
+          </Pressable>
+        )}
       </View>
     </View>
   );
