@@ -1,24 +1,53 @@
+import { useState, useEffect } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useStore } from 'zustand';
 import { authStore } from '../src/lib/auth';
 import { GlassHeader } from '../src/shared/components/glass-header';
 import { ActionCard } from '../src/shared/components/action-card';
+import { useWs } from '../src/shared/providers/websocket-provider';
+import {
+  createWsMessage,
+  ROOM_MESSAGE_TYPE,
+  type RoomStatePayload,
+} from '@jellysync/shared';
 
 export default function HomeScreen() {
   const username = useStore(authStore, (s) => s.username);
   const serverUrl = useStore(authStore, (s) => s.serverUrl);
   const logout = useStore(authStore, (s) => s.logout);
   const router = useRouter();
+  const { send, subscribe } = useWs();
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    const unsub = subscribe(ROOM_MESSAGE_TYPE.STATE, (msg) => {
+      if (!creating) return;
+      const payload = msg.payload as RoomStatePayload;
+      setCreating(false);
+      router.push(`/room/${payload.roomCode}`);
+    });
+
+    const unsubError = subscribe('error', () => {
+      setCreating(false);
+    });
+
+    return () => {
+      unsub();
+      unsubError();
+    };
+  }, [subscribe, creating, router]);
 
   const handleCreateRoom = () => {
-    router.push('/create-room');
+    if (creating) return;
+    setCreating(true);
+    send(createWsMessage(ROOM_MESSAGE_TYPE.CREATE, { displayName: username ?? 'User' }));
   };
 
   const handleJoinRoom = () => {
     Alert.alert(
       'Join Room',
-      'Room joining is coming in Epic 2.',
+      'Room joining is coming in Story 2-3.',
     );
   };
 
