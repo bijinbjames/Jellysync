@@ -56,7 +56,7 @@ development_status:
   2-1-signaling-server-and-websocket-foundation: done
   2-2-room-creation-and-lobby-screen: done
   2-3-join-room-via-code-entry: done
-  2-4-deep-link-join: backlog
+  2-4-deep-link-join: done
   2-5-room-lifecycle-and-host-transfer: backlog
   epic-2-retrospective: optional
 

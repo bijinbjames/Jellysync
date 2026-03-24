@@ -19,6 +19,11 @@ import { WebSocketProvider } from '../src/shared/providers/websocket-provider';
 
 SplashScreen.preventAutoHideAsync();
 
+const INTENT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+let pendingDeepLink: string | null = null;
+let pendingDeepLinkTimestamp: number | null = null;
+
 function AuthGate({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
   const isAuthenticated = useStore(authStore, (s) => s.isAuthenticated);
@@ -28,10 +33,28 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   const onLoginPage = segments[0] === 'login';
 
+  // Capture pending deep link before redirecting to login
   if (!isAuthenticated && !onLoginPage) {
+    const currentPath = '/' + segments.join('/');
+    if (currentPath !== '/') {
+      pendingDeepLink = currentPath;
+      pendingDeepLinkTimestamp = Date.now();
+    }
     return <Redirect href="/login" />;
   }
+
+  // After login, check for pending deep link and navigate
   if (isAuthenticated && onLoginPage) {
+    if (
+      pendingDeepLink &&
+      pendingDeepLinkTimestamp &&
+      Date.now() - pendingDeepLinkTimestamp < INTENT_TIMEOUT_MS
+    ) {
+      const target = pendingDeepLink;
+      pendingDeepLink = null;
+      pendingDeepLinkTimestamp = null;
+      return <Redirect href={target as any} />;
+    }
     return <Redirect href="/" />;
   }
 

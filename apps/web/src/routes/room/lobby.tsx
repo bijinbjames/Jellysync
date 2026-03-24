@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useStore } from 'zustand';
+import { authStore } from '../../lib/auth';
 import { roomStore } from '../../lib/room';
 import { useWs } from '../../shared/providers/websocket-provider';
-import { createWsMessage, ROOM_MESSAGE_TYPE, ROOM_CONFIG } from '@jellysync/shared';
+import { createWsMessage, ROOM_MESSAGE_TYPE, ROOM_CONFIG, ERROR_CODE } from '@jellysync/shared';
 import { RoomCodeDisplay } from '../../features/room/components/room-code-display';
 import { ParticipantChip } from '../../features/room/components/participant-chip';
 import { MovieBriefCard } from '../../features/room/components/movie-brief-card';
@@ -13,11 +14,18 @@ const VISIBLE_SLOTS = 6;
 export default function RoomLobbyPage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const { send } = useWs();
+  const { send, subscribe } = useWs();
 
   const roomCode = useStore(roomStore, (s) => s.roomCode);
   const participants = useStore(roomStore, (s) => s.participants);
   const isHost = useStore(roomStore, (s) => s.isHost);
+
+  const [autoJoining, setAutoJoining] = useState(false);
+  const [joinError, setJoinError] = useState<string | false>(false);
+  const joinSentRef = useRef(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const connectionState = useStore(roomStore, (s) => s.connectionState);
 
   const emptySlots = Math.max(0, VISIBLE_SLOTS - participants.length);
 
@@ -27,11 +35,99 @@ export default function RoomLobbyPage() {
     navigate('/');
   };
 
+  // Auto-join via URL: subscribe first, then send when WS is ready
+  useEffect(() => {
+    const needsAutoJoin = code && !roomCode && !joinError;
+    if (!needsAutoJoin) return;
+
+    setAutoJoining(true);
+
+    const unsubErr = subscribe('error', (msg) => {
+      const error = msg.payload as { code: string; message: string; context?: string };
+      if (error.context === 'room:join') {
+        joinSentRef.current = false;
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        setAutoJoining(false);
+        setJoinError(
+          error.code === ERROR_CODE.ALREADY_IN_ROOM
+            ? 'You are already in another room'
+            : 'This room is no longer active',
+        );
+      }
+    });
+
+    const sendJoin = () => {
+      if (joinSentRef.current) return;
+      joinSentRef.current = true;
+      const username = authStore.getState().username;
+      send(createWsMessage(ROOM_MESSAGE_TYPE.JOIN, { roomCode: code, displayName: username ?? 'User' }));
+      timeoutRef.current = setTimeout(() => {
+        joinSentRef.current = false;
+        setAutoJoining(false);
+        setJoinError('Connection timed out — please try again');
+      }, 10_000);
+    };
+
+    if (connectionState === 'connected') {
+      sendJoin();
+    }
+
+    return () => {
+      unsubErr();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [code, roomCode, joinError, connectionState, send, subscribe]);
+
+  // When room state arrives, auto-join is complete
+  useEffect(() => {
+    if (roomCode && autoJoining) {
+      joinSentRef.current = false;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      setAutoJoining(false);
+    }
+  }, [roomCode, autoJoining]);
+
+  // Redirect home only if no code param AND no room state
   useEffect(() => {
     if (!roomCode && !code) {
       navigate('/', { replace: true });
     }
   }, [roomCode, code, navigate]);
+
+  // Error state for invalid/expired room
+  if (joinError) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-2 w-full max-w-sm">
+          <h2 className="text-on-surface font-heading text-lg font-bold text-center">
+            {joinError}
+          </h2>
+          <p className="text-on-surface-variant font-body text-sm text-center">
+            {joinError === 'Connection timed out — please try again'
+              ? 'Check your connection and try the link again'
+              : 'The room may have ended or the code has expired'}
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            aria-label="Back to Home"
+            className="gradient-primary rounded-md min-h-[48px] w-full mt-4 font-display text-base font-bold text-on-primary cursor-pointer"
+          >
+            Back to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state while auto-joining
+  if (autoJoining) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const displayCode = roomCode ?? code ?? '';
 
