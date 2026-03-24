@@ -8,16 +8,17 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint .",
-    "test": "echo \"No tests yet\"",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "fastify": "^5.8.2",
     "@fastify/websocket": "^11.2.0",
-    "@jellysync/shared": "workspace:*"
+    "@jellysync/shared": "workspace:*",
+    "fastify": "^5.8.2"
   },
   "devDependencies": {
     "tsx": "^4.19.0",
-    "typescript": "~5.8.0"
+    "typescript": "~5.8.0",
+    "vitest": "^4.1.0"
   }
 }

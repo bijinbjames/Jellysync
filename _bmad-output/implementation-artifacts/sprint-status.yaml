@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-22
-last_updated: 2026-03-22
+last_updated: 2026-03-24
 project: myapp
 project_key: NOKEY
 tracking_system: file-system
@@ -48,12 +48,12 @@ development_status:
   1-2-design-system-token-implementation: done
   1-3-jellyfin-authentication-flow: done
   1-4-home-hub-screen: done
-  1-5-user-logout: review
+  1-5-user-logout: done
   epic-1-retrospective: optional
 
   # Epic 2: Room Creation & Joining
-  epic-2: backlog
-  2-1-signaling-server-and-websocket-foundation: backlog
+  epic-2: in-progress
+  2-1-signaling-server-and-websocket-foundation: done
   2-2-room-creation-and-lobby-screen: backlog
   2-3-join-room-via-code-entry: backlog
   2-4-deep-link-join: backlog

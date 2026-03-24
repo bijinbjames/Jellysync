@@ -18,7 +18,7 @@ export function ServerUrlInput({ value, onChangeText, error }: ServerUrlInputPro
           className="flex-1 text-on-surface font-body text-base py-3"
           value={value}
           onChangeText={onChangeText}
-          placeholder="jellyfin.example.com"
+          placeholder="https://jellyfin.example.com"
           placeholderTextColor="#869391"
           keyboardType="url"
           autoCorrect={false}

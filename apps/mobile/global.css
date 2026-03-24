@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .glass {
+    background-color: rgba(32, 31, 31, 0.85);
+    border-width: 1px;
+    border-color: rgba(61, 73, 72, 0.15);
+  }
+
+  .gradient-primary {
+    background-color: #4ecdc4;
+  }
+}

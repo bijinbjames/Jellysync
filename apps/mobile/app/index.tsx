@@ -4,7 +4,6 @@ import { useStore } from 'zustand';
 import { authStore } from '../src/lib/auth';
 import { GlassHeader } from '../src/shared/components/glass-header';
 import { ActionCard } from '../src/shared/components/action-card';
-import { CodeInput } from '../src/shared/components/code-input';
 
 export default function HomeScreen() {
   const username = useStore(authStore, (s) => s.username);
@@ -16,10 +15,10 @@ export default function HomeScreen() {
     router.push('/create-room');
   };
 
-  const handleJoinRoom = (code: string) => {
+  const handleJoinRoom = () => {
     Alert.alert(
       'Join Room',
-      `Room joining is coming in Epic 2. Code entered: ${code}`,
+      'Room joining is coming in Epic 2.',
     );
   };
 
@@ -43,7 +42,7 @@ export default function HomeScreen() {
           <ActionCard
             variant="primary"
             headline="Create Room"
-            description="Start a new watch session and invite your friends"
+            description="Pick a movie and invite others"
             icon="🎬"
             onPress={handleCreateRoom}
           />
@@ -51,13 +50,15 @@ export default function HomeScreen() {
           <ActionCard
             variant="secondary"
             headline="Join Room"
-            description="Enter a room code to join an existing session"
-            icon="🎟️"
-            onPress={() => {}}
-          >
-            <CodeInput onSubmit={handleJoinRoom} />
-          </ActionCard>
+            description="Enter a code or tap a link"
+            icon="🚪"
+            onPress={handleJoinRoom}
+          />
         </View>
+
+        <Text className="text-outline text-xs font-body uppercase tracking-widest text-center mt-auto pt-12">
+          Synced via JellySync Core v2.4.5
+        </Text>
       </ScrollView>
     </View>
   );

@@ -28,7 +28,7 @@ export function GlassHeader(props: GlassHeaderProps) {
             {title}
           </Text>
           {subtitle && (
-            <Text className="text-secondary/70 font-body text-sm mt-0.5" numberOfLines={1}>
+            <Text className="text-secondary/70 font-body text-xs mt-0.5 uppercase tracking-widest" numberOfLines={1}>
               {subtitle}
             </Text>
           )}

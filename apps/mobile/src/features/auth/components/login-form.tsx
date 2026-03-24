@@ -30,13 +30,14 @@ export function LoginForm() {
 
   return (
     <View className="w-full max-w-sm">
-      <View className="items-center mb-8">
-        <Text className="text-primary font-display text-4xl font-extrabold">
-          JellySync
-        </Text>
-      </View>
-
       <View className="glass rounded-lg p-6">
+        <Text className="text-on-surface font-display text-2xl font-bold mb-1">
+          Connect Server
+        </Text>
+        <Text className="text-on-surface-variant font-body text-sm mb-6">
+          Enter your Jellyfin details to start syncing.
+        </Text>
+
         <ServerUrlInput
           value={serverUrl}
           onChangeText={(text) => {
@@ -59,7 +60,7 @@ export function LoginForm() {
                 setUsername(text);
                 if (error) clearError();
               }}
-              placeholder="Username"
+              placeholder="Your username"
               placeholderTextColor="#869391"
               autoCapitalize="none"
               autoCorrect={false}
@@ -93,7 +94,7 @@ export function LoginForm() {
         </View>
 
         <Pressable
-          className="bg-primary rounded-md min-h-[48px] items-center justify-center"
+          className="bg-primary rounded-md min-h-[48px] items-center justify-center flex-row"
           onPress={handleConnect}
           disabled={isLoading}
         >
@@ -101,7 +102,7 @@ export function LoginForm() {
             <ActivityIndicator color="#131313" />
           ) : (
             <Text className="text-surface font-display text-base font-bold">
-              Connect
+              Connect  →
             </Text>
           )}
         </Pressable>

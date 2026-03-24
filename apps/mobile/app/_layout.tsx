@@ -15,6 +15,7 @@ import {
 } from '@expo-google-fonts/inter';
 import { useStore } from 'zustand';
 import { authStore } from '../src/lib/auth';
+import { WebSocketProvider } from '../src/shared/providers/websocket-provider';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -61,7 +62,9 @@ export default function RootLayout() {
 
   return (
     <AuthGate>
-      <Slot />
+      <WebSocketProvider>
+        <Slot />
+      </WebSocketProvider>
       <StatusBar style="light" />
     </AuthGate>
   );

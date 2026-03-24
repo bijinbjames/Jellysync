@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { useStore } from 'zustand';
 import { authStore } from './lib/auth';
+import { WebSocketProvider } from './shared/providers/websocket-provider';
 import LoginPage from './routes/login';
 import HomePage from './routes/index';
 import CreateRoomPage from './routes/create-room';
@@ -25,6 +26,14 @@ function GuestGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function AuthenticatedRoutes({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthGuard>
+      <WebSocketProvider>{children}</WebSocketProvider>
+    </AuthGuard>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -40,17 +49,17 @@ export default function App() {
         <Route
           path="/"
           element={
-            <AuthGuard>
+            <AuthenticatedRoutes>
               <HomePage />
-            </AuthGuard>
+            </AuthenticatedRoutes>
           }
         />
         <Route
           path="/create-room"
           element={
-            <AuthGuard>
+            <AuthenticatedRoutes>
               <CreateRoomPage />
-            </AuthGuard>
+            </AuthenticatedRoutes>
           }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
