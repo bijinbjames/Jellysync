@@ -4,7 +4,6 @@ import { useStore } from 'zustand';
 import { authStore } from '../lib/auth';
 import { GlassHeader } from '../shared/components/glass-header';
 import { ActionCard } from '../shared/components/action-card';
-import { CodeInput } from '../shared/components/code-input';
 import { useWs } from '../shared/providers/websocket-provider';
 import {
   createWsMessage,
@@ -44,10 +43,8 @@ export default function HomePage() {
     send(createWsMessage(ROOM_MESSAGE_TYPE.CREATE, { displayName: username ?? 'User' }));
   };
 
-  const handleJoinRoom = (code: string) => {
-    window.alert(
-      `Room joining is coming in Story 2-3. Code entered: ${code}`,
-    );
+  const handleJoinRoom = () => {
+    navigate('/join');
   };
 
   return (
@@ -77,10 +74,8 @@ export default function HomePage() {
             headline="Join Room"
             description="Enter a room code to join an existing session"
             icon="🎟️"
-            onPress={() => {}}
-          >
-            <CodeInput onSubmit={handleJoinRoom} />
-          </ActionCard>
+            onPress={handleJoinRoom}
+          />
         </div>
       </main>
     </div>

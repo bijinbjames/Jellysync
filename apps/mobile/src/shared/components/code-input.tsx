@@ -1,57 +1,119 @@
-import { useState } from 'react';
-import { View, TextInput, Pressable, Text } from 'react-native';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { TextInput, Animated } from 'react-native';
 
 interface CodeInputProps {
-  onSubmit: (code: string) => void;
+  value?: string;
+  onChange?: (code: string) => void;
+  error?: boolean;
 }
 
-export function CodeInput({ onSubmit }: CodeInputProps) {
-  const [code, setCode] = useState('');
+export function CodeInput({ value, onChange, error }: CodeInputProps) {
+  const [internalCode, setInternalCode] = useState('');
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const code = value ?? internalCode;
+  const inputRefs = useRef<(TextInput | null)[]>([]);
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const prevErrorRef = useRef(false);
 
-  const handleChange = (text: string) => {
-    const cleaned = text.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
-    setCode(cleaned);
+  const handleCodeChange = useCallback(
+    (newCode: string) => {
+      if (onChange) {
+        onChange(newCode);
+      } else {
+        setInternalCode(newCode);
+      }
+    },
+    [onChange],
+  );
+
+  useEffect(() => {
+    if (error && !prevErrorRef.current) {
+      shakeAnim.stopAnimation();
+      shakeAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 4, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+      ]).start();
+    }
+    prevErrorRef.current = !!error;
+  }, [error, shakeAnim]);
+
+  useEffect(() => {
+    inputRefs.current[0]?.focus();
+  }, []);
+
+  const chars = code.split('');
+
+  const handleCharChange = (index: number, text: string) => {
+    const cleaned = text.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+    if (cleaned.length > 1) {
+      const pasted = cleaned.slice(0, 6);
+      handleCodeChange(pasted);
+      const focusIndex = Math.min(pasted.length, 5);
+      inputRefs.current[focusIndex]?.focus();
+      return;
+    }
+
+    const newChars = [...chars];
+    while (newChars.length < 6) newChars.push('');
+
+    if (cleaned.length === 1) {
+      newChars[index] = cleaned;
+      handleCodeChange(newChars.join(''));
+      if (index < 5) {
+        inputRefs.current[index + 1]?.focus();
+      }
+    } else {
+      newChars[index] = '';
+      handleCodeChange(newChars.join('').replace(/\0+$/, ''));
+    }
   };
 
-  const handleSubmit = () => {
-    if (code.length === 6) {
-      onSubmit(code);
+  const handleKeyPress = (index: number, key: string) => {
+    if (key === 'Backspace') {
+      if (!chars[index] && index > 0) {
+        const newChars = [...chars];
+        while (newChars.length < 6) newChars.push('');
+        newChars[index - 1] = '';
+        handleCodeChange(newChars.join('').replace(/\0+$/, ''));
+        inputRefs.current[index - 1]?.focus();
+      }
     }
   };
 
   return (
-    <View
-      className="flex-row items-center gap-2"
-      onStartShouldSetResponder={() => true}
-      onTouchEnd={(e) => e.stopPropagation()}
+    <Animated.View
+      className="flex-row items-center justify-center gap-2"
+      style={{ transform: [{ translateX: shakeAnim }] }}
     >
-      <TextInput
-        className="flex-1 bg-surface-container-lowest rounded-md min-h-[48px] px-3 text-on-surface font-display text-lg font-bold tracking-widest"
-        value={code}
-        onChangeText={handleChange}
-        placeholder="Enter code"
-        placeholderTextColor="#bcc9c7"
-        maxLength={6}
-        autoCapitalize="characters"
-        autoCorrect={false}
-      />
-      <Pressable
-        onPress={handleSubmit}
-        disabled={code.length !== 6}
-        accessibilityRole="button"
-        accessibilityLabel="Join room"
-        className={`min-h-[48px] px-4 rounded-md items-center justify-center ${
-          code.length === 6 ? 'bg-primary' : 'bg-surface-container-lowest'
-        }`}
-      >
-        <Text
-          className={`font-display text-sm font-bold ${
-            code.length === 6 ? 'text-surface-container-lowest' : 'text-on-surface-variant'
+      {Array.from({ length: 6 }).map((_, i) => (
+        <TextInput
+          key={i}
+          ref={(ref) => {
+            inputRefs.current[i] = ref;
+          }}
+          className={`w-12 h-14 bg-surface-container-high rounded-md text-center text-primary font-mono text-2xl font-bold tracking-[0.2em] border-2 ${
+            error ? 'border-error' : chars[i] ? 'border-primary' : 'border-transparent'
           }`}
-        >
-          Join
-        </Text>
-      </Pressable>
-    </View>
+          style={error ? { backgroundColor: 'rgba(208, 188, 255, 0.1)' } : focusedIndex === i ? { backgroundColor: 'rgba(208, 188, 255, 0.1)' } : undefined}
+          value={chars[i] ?? ''}
+          onChangeText={(text) => handleCharChange(i, text)}
+          onKeyPress={(e) => handleKeyPress(i, e.nativeEvent.key)}
+          onFocus={() => setFocusedIndex(i)}
+          onBlur={() => setFocusedIndex((prev) => (prev === i ? null : prev))}
+          maxLength={6}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          autoComplete="off"
+          inputMode="text"
+          accessibilityLabel={`Code digit ${i + 1}`}
+        />
+      ))}
+    </Animated.View>
   );
 }

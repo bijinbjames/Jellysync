@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useStore } from 'zustand';
 import { authStore } from '../src/lib/auth';
@@ -45,10 +45,7 @@ export default function HomeScreen() {
   };
 
   const handleJoinRoom = () => {
-    Alert.alert(
-      'Join Room',
-      'Room joining is coming in Story 2-3.',
-    );
+    router.push('/join');
   };
 
   return (

@@ -5,6 +5,7 @@ import { WebSocketProvider } from './shared/providers/websocket-provider';
 import LoginPage from './routes/login';
 import HomePage from './routes/index';
 import CreateRoomPage from './routes/create-room';
+import JoinPage from './routes/join';
 import RoomLobbyPage from './routes/room/lobby';
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -52,6 +53,14 @@ export default function App() {
           element={
             <AuthenticatedRoutes>
               <HomePage />
+            </AuthenticatedRoutes>
+          }
+        />
+        <Route
+          path="/join"
+          element={
+            <AuthenticatedRoutes>
+              <JoinPage />
             </AuthenticatedRoutes>
           }
         />

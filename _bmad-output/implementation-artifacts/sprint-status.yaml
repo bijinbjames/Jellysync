@@ -54,8 +54,8 @@ development_status:
   # Epic 2: Room Creation & Joining
   epic-2: in-progress
   2-1-signaling-server-and-websocket-foundation: done
-  2-2-room-creation-and-lobby-screen: review
-  2-3-join-room-via-code-entry: backlog
+  2-2-room-creation-and-lobby-screen: done
+  2-3-join-room-via-code-entry: done
   2-4-deep-link-join: backlog
   2-5-room-lifecycle-and-host-transfer: backlog
   epic-2-retrospective: optional

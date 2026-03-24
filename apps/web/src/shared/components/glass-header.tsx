@@ -6,6 +6,16 @@ interface GlassHeaderProps {
   subtitle?: string;
   onAction?: () => void;
   actionLabel?: string;
+  onBack?: () => void;
+}
+
+function BackIcon() {
+  return (
+    <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
+    </svg>
+  );
 }
 
 function LogoutIcon() {
@@ -19,7 +29,28 @@ function LogoutIcon() {
 }
 
 export function GlassHeader(props: GlassHeaderProps) {
-  const { title, subtitle, onAction, actionLabel = 'Log out' } = props;
+  const { variant, title, subtitle, onAction, actionLabel = 'Log out', onBack } = props;
+
+  if (variant === 'navigation') {
+    return (
+      <header className="glass px-6 py-4 sticky top-0 z-10">
+        <div className="flex items-center justify-between max-w-screen-xl mx-auto">
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Go back"
+            className="min-h-[48px] min-w-[48px] flex items-center justify-center cursor-pointer text-on-surface-variant hover:text-on-surface transition-colors"
+          >
+            <BackIcon />
+          </button>
+          <span className="text-on-surface-variant font-body text-xs uppercase tracking-widest">
+            {title}
+          </span>
+          <div className="w-12" />
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="glass px-6 py-4 sticky top-0 z-10">
