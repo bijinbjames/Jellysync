@@ -57,6 +57,11 @@ export function useWebSocket(): UseWebSocket {
       setRoom(payload.roomCode, payload.hostId, payload.participants);
     }
 
+    // Clear room store on room:close (room destroyed by server)
+    if (data.type === ROOM_MESSAGE_TYPE.CLOSE) {
+      roomStore.getState().clearRoom();
+    }
+
     const handlers = subscribersRef.current.get(data.type);
     if (handlers) {
       for (const handler of handlers) {

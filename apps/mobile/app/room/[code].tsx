@@ -23,6 +23,7 @@ export default function RoomLobbyScreen() {
 
   const [autoJoining, setAutoJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | false>(false);
+  const [roomClosed, setRoomClosed] = useState(false);
   const joinSentRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -40,9 +41,17 @@ export default function RoomLobbyScreen() {
     }
   };
 
+  // Subscribe to room:close — room destroyed by server
+  useEffect(() => {
+    const unsub = subscribe(ROOM_MESSAGE_TYPE.CLOSE, () => {
+      setRoomClosed(true);
+    });
+    return unsub;
+  }, [subscribe]);
+
   // Auto-join via deep link: subscribe first, then send when WS is ready
   useEffect(() => {
-    const needsAutoJoin = code && !roomCode && !joinError;
+    const needsAutoJoin = code && !roomCode && !joinError && !roomClosed;
     if (!needsAutoJoin) return;
 
     setAutoJoining(true);
@@ -98,6 +107,30 @@ export default function RoomLobbyScreen() {
       router.replace('/');
     }
   }, [roomCode, code, router]);
+
+  // Room closed by server
+  if (roomClosed) {
+    return (
+      <View className="flex-1 bg-surface items-center justify-center p-6">
+        <Text className="text-on-surface font-heading text-lg font-bold text-center">
+          This room has ended
+        </Text>
+        <Text className="text-on-surface-variant font-body text-sm text-center mt-2">
+          The room was closed because everyone has left
+        </Text>
+        <Pressable
+          onPress={() => router.replace('/')}
+          accessibilityRole="button"
+          accessibilityLabel="Back to Home"
+          className="gradient-primary rounded-md min-h-[48px] items-center justify-center w-full mt-6"
+        >
+          <Text className="text-on-primary font-display text-base font-bold">
+            Back to Home
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   // Error state for invalid/expired room
   if (joinError) {

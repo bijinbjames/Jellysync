@@ -22,6 +22,7 @@ export default function RoomLobbyPage() {
 
   const [autoJoining, setAutoJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | false>(false);
+  const [roomClosed, setRoomClosed] = useState(false);
   const joinSentRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -35,9 +36,17 @@ export default function RoomLobbyPage() {
     navigate('/');
   };
 
+  // Subscribe to room:close — room destroyed by server
+  useEffect(() => {
+    const unsub = subscribe(ROOM_MESSAGE_TYPE.CLOSE, () => {
+      setRoomClosed(true);
+    });
+    return unsub;
+  }, [subscribe]);
+
   // Auto-join via URL: subscribe first, then send when WS is ready
   useEffect(() => {
-    const needsAutoJoin = code && !roomCode && !joinError;
+    const needsAutoJoin = code && !roomCode && !joinError && !roomClosed;
     if (!needsAutoJoin) return;
 
     setAutoJoining(true);
@@ -93,6 +102,30 @@ export default function RoomLobbyPage() {
       navigate('/', { replace: true });
     }
   }, [roomCode, code, navigate]);
+
+  // Room closed by server
+  if (roomClosed) {
+    return (
+      <div className="min-h-screen bg-surface flex items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-2 w-full max-w-sm">
+          <h2 className="text-on-surface font-heading text-lg font-bold text-center">
+            This room has ended
+          </h2>
+          <p className="text-on-surface-variant font-body text-sm text-center">
+            The room was closed because everyone has left
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            aria-label="Back to Home"
+            className="gradient-primary rounded-md min-h-[48px] w-full mt-4 font-display text-base font-bold text-on-primary cursor-pointer"
+          >
+            Back to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Error state for invalid/expired room
   if (joinError) {

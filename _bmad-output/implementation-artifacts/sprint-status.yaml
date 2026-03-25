@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-03-22
-last_updated: 2026-03-24
+last_updated: 2026-03-25
 project: myapp
 project_key: NOKEY
 tracking_system: file-system
@@ -57,7 +57,7 @@ development_status:
   2-2-room-creation-and-lobby-screen: done
   2-3-join-room-via-code-entry: done
   2-4-deep-link-join: done
-  2-5-room-lifecycle-and-host-transfer: backlog
+  2-5-room-lifecycle-and-host-transfer: done
   epic-2-retrospective: optional
 
   # Epic 3: Library Browsing & Movie Selection

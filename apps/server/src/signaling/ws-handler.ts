@@ -205,6 +205,9 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
       broadcastToRoom(room, (pid) =>
         createWsMessage(ROOM_MESSAGE_TYPE.STATE, roomToStatePayload(room, pid)),
       );
+    } else {
+      // Room destroyed (last participant left) — notify the leaving socket
+      sendTo(socket, createWsMessage(ROOM_MESSAGE_TYPE.CLOSE, { reason: 'Room ended' }));
     }
   }
 
@@ -239,6 +242,7 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
             createWsMessage(ROOM_MESSAGE_TYPE.STATE, roomToStatePayload(room, pid)),
           );
         }
+        // When room is destroyed (null), no remaining connections to notify
       }, WS_RECONNECT.DISCONNECT_GRACE_MS);
 
       disconnectTimers.set(participantId, timer);

@@ -197,6 +197,87 @@ describe('ws-handler', () => {
       hostWs.close();
       joinWs.close();
     });
+
+    it('transfers host to earliest joiner when host leaves', async () => {
+      const hostWs = await connectWs(address);
+      const createResponse = waitForMessage(hostWs);
+      sendMessage(hostWs, ROOM_MESSAGE_TYPE.CREATE, { displayName: 'Alice' });
+      const createResult = await createResponse;
+      const roomCode = (createResult.payload as Record<string, unknown>).roomCode;
+
+      const joinWs = await connectWs(address);
+      const joinResponse = waitForMessage(joinWs);
+      const hostJoinBroadcast = waitForMessage(hostWs);
+      sendMessage(joinWs, ROOM_MESSAGE_TYPE.JOIN, { roomCode, displayName: 'Bob' });
+      await joinResponse;
+      await hostJoinBroadcast;
+
+      // Host (Alice) leaves — Bob should become host
+      const bobBroadcast = waitForMessage(joinWs);
+      sendMessage(hostWs, ROOM_MESSAGE_TYPE.LEAVE, {});
+
+      const bobResult = await bobBroadcast;
+      expect(bobResult.type).toBe(ROOM_MESSAGE_TYPE.STATE);
+      const payload = bobResult.payload as Record<string, unknown>;
+      const participants = payload.participants as Array<Record<string, unknown>>;
+      expect(participants).toHaveLength(1);
+      expect(participants[0].displayName).toBe('Bob');
+      expect(participants[0].isHost).toBe(true);
+      expect(payload.hostId).toBe(participants[0].id);
+
+      hostWs.close();
+      joinWs.close();
+    });
+
+    it('sends room:close when last participant leaves (room destroyed)', async () => {
+      const ws = await connectWs(address);
+      const createResponse = waitForMessage(ws);
+      sendMessage(ws, ROOM_MESSAGE_TYPE.CREATE, { displayName: 'Alice' });
+      const createResult = await createResponse;
+      const roomCode = (createResult.payload as Record<string, unknown>).roomCode as string;
+
+      // Alice leaves — she is the only participant, room should be destroyed
+      const closeResponse = waitForMessage(ws);
+      sendMessage(ws, ROOM_MESSAGE_TYPE.LEAVE, {});
+
+      const closeResult = await closeResponse;
+      expect(closeResult.type).toBe(ROOM_MESSAGE_TYPE.CLOSE);
+      expect((closeResult.payload as Record<string, unknown>).reason).toBe('Room ended');
+
+      // Room should be destroyed
+      expect(roomManager.getRoom(roomCode)).toBeNull();
+
+      ws.close();
+    });
+
+    it('removes participant immediately without grace period on explicit leave', async () => {
+      const hostWs = await connectWs(address);
+      const createResponse = waitForMessage(hostWs);
+      sendMessage(hostWs, ROOM_MESSAGE_TYPE.CREATE, { displayName: 'Alice' });
+      const createResult = await createResponse;
+      const roomCode = (createResult.payload as Record<string, unknown>).roomCode as string;
+
+      const joinWs = await connectWs(address);
+      const joinResponse = waitForMessage(joinWs);
+      const hostJoinBroadcast = waitForMessage(hostWs);
+      sendMessage(joinWs, ROOM_MESSAGE_TYPE.JOIN, { roomCode, displayName: 'Bob' });
+      await joinResponse;
+      await hostJoinBroadcast;
+
+      // Bob sends explicit leave
+      const hostBroadcast = waitForMessage(hostWs);
+      sendMessage(joinWs, ROOM_MESSAGE_TYPE.LEAVE, {});
+      await hostBroadcast;
+
+      // Participant should be removed immediately (no grace period)
+      const room = roomManager.getRoom(roomCode);
+      expect(room).not.toBeNull();
+      expect(room!.participants.size).toBe(1);
+      expect(disconnectTimers.size).toBe(0);
+
+      hostWs.close();
+      joinWs.close();
+    });
   });
 
   describe('connection close with grace period', () => {

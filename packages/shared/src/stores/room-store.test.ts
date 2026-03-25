@@ -116,4 +116,51 @@ describe('roomStore', () => {
       expect(store.getState().isHost).toBe(true);
     });
   });
+
+  describe('room lifecycle: participant removal via setRoom', () => {
+    it('reflects participant removal when setRoom receives updated participant list', () => {
+      store.getState().setParticipantId('p-1');
+      store.getState().setRoom('ABC123', 'p-1', [alice, bob]);
+      expect(store.getState().participants).toHaveLength(2);
+
+      // Server sends updated state after Bob leaves
+      store.getState().setRoom('ABC123', 'p-1', [alice]);
+      expect(store.getState().participants).toHaveLength(1);
+      expect(store.getState().participants[0].id).toBe('p-1');
+    });
+
+    it('reflects host transfer when setRoom receives new hostId', () => {
+      store.getState().setParticipantId('p-2');
+      store.getState().setRoom('ABC123', 'p-1', [alice, bob]);
+      expect(store.getState().isHost).toBe(false);
+      expect(store.getState().hostId).toBe('p-1');
+
+      // Host (Alice) left, Bob is now host
+      const bobAsHost: Participant = { ...bob, isHost: true };
+      store.getState().setRoom('ABC123', 'p-2', [bobAsHost]);
+      expect(store.getState().isHost).toBe(true);
+      expect(store.getState().hostId).toBe('p-2');
+      expect(store.getState().participants).toHaveLength(1);
+    });
+  });
+
+  describe('room lifecycle: clearRoom on room:close', () => {
+    it('resets all room state when clearRoom is called (simulating room:close)', () => {
+      store.getState().setConnectionState('connected');
+      store.getState().setParticipantId('p-2');
+      store.getState().setRoom('ABC123', 'p-1', [alice, bob]);
+
+      // Simulate room:close handler calling clearRoom
+      store.getState().clearRoom();
+
+      const state = store.getState();
+      expect(state.roomCode).toBeNull();
+      expect(state.participants).toEqual([]);
+      expect(state.hostId).toBeNull();
+      expect(state.isHost).toBe(false);
+      expect(state.participantId).toBeNull();
+      // Connection state is preserved
+      expect(state.connectionState).toBe('connected');
+    });
+  });
 });
