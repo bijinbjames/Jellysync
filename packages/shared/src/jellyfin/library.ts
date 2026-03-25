@@ -45,6 +45,9 @@ export async function fetchMovieList(
   userId: string,
   options?: FetchMovieListOptions,
 ): Promise<JellyfinLibraryResponse> {
+  if (!serverUrl || !token || !userId) {
+    throw new LibraryError('unknown', 'Missing required parameters: serverUrl, token, and userId');
+  }
   const params = new URLSearchParams({
     IncludeItemTypes: 'Movie',
     Recursive: 'true',
@@ -75,6 +78,9 @@ export async function fetchMovieDetails(
   userId: string,
   movieId: string,
 ): Promise<JellyfinMovieDetails> {
+  if (!serverUrl || !token || !userId || !movieId) {
+    throw new LibraryError('unknown', 'Missing required parameters: serverUrl, token, userId, and movieId');
+  }
   try {
     return await makeRequest<JellyfinMovieDetails>(
       serverUrl,
@@ -89,10 +95,15 @@ export async function fetchMovieDetails(
 export async function fetchLibraryCategories(
   serverUrl: string,
   token: string,
+  userId?: string,
 ): Promise<JellyfinGenresResponse> {
+  if (!serverUrl || !token) {
+    throw new LibraryError('unknown', 'Missing required parameters: serverUrl and token');
+  }
   const params = new URLSearchParams({
     IncludeItemTypes: 'Movie',
   });
+  if (userId) params.set('UserId', userId);
 
   try {
     return await makeRequest<JellyfinGenresResponse>(

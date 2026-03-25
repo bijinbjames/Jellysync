@@ -2,6 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchMovieList, fetchMovieDetails, fetchLibraryCategories, getImageUrl } from './library.js';
 import { LibraryError } from './types.js';
 
+vi.mock('./client.js', () => ({
+  makeRequest: vi.fn(),
+}));
+
+import { makeRequest } from './client.js';
+
+const mockMakeRequest = vi.mocked(makeRequest);
+
 const SERVER_URL = 'https://jellyfin.example.com';
 const TOKEN = 'test-token-123';
 const USER_ID = 'user-guid-123';
@@ -40,42 +48,33 @@ const mockGenresResponse = {
   ],
 };
 
-function mockFetch(data: unknown, status = 200) {
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-    new Response(JSON.stringify(data), { status }),
-  );
-}
-
 describe('fetchMovieList', () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should fetch movies with default params', async () => {
-    mockFetch(mockLibraryResponse);
+    mockMakeRequest.mockResolvedValue(mockLibraryResponse);
 
     const result = await fetchMovieList(SERVER_URL, TOKEN, USER_ID);
 
     expect(result).toEqual(mockLibraryResponse);
-    expect(fetch).toHaveBeenCalledWith(
+    expect(mockMakeRequest).toHaveBeenCalledWith(
+      SERVER_URL,
       expect.stringContaining(`/Users/${USER_ID}/Items?`),
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          'X-Emby-Authorization': expect.stringContaining('MediaBrowser'),
-        }),
-      }),
+      TOKEN,
     );
-    const url = (fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    expect(url).toContain('IncludeItemTypes=Movie');
-    expect(url).toContain('Recursive=true');
-    expect(url).toContain('SortBy=SortName');
-    expect(url).toContain('SortOrder=Ascending');
-    expect(url).toContain('StartIndex=0');
-    expect(url).toContain('Limit=50');
+    const path = mockMakeRequest.mock.calls[0][1] as string;
+    expect(path).toContain('IncludeItemTypes=Movie');
+    expect(path).toContain('Recursive=true');
+    expect(path).toContain('SortBy=SortName');
+    expect(path).toContain('SortOrder=Ascending');
+    expect(path).toContain('StartIndex=0');
+    expect(path).toContain('Limit=50');
   });
 
   it('should apply custom options', async () => {
-    mockFetch(mockLibraryResponse);
+    mockMakeRequest.mockResolvedValue(mockLibraryResponse);
 
     await fetchMovieList(SERVER_URL, TOKEN, USER_ID, {
       genreId: 'genre-1',
@@ -85,126 +84,189 @@ describe('fetchMovieList', () => {
       sortOrder: 'Descending',
     });
 
-    const url = (fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    expect(url).toContain('GenreIds=genre-1');
-    expect(url).toContain('StartIndex=10');
-    expect(url).toContain('Limit=25');
-    expect(url).toContain('SortBy=DateCreated');
-    expect(url).toContain('SortOrder=Descending');
+    const path = mockMakeRequest.mock.calls[0][1] as string;
+    expect(path).toContain('GenreIds=genre-1');
+    expect(path).toContain('StartIndex=10');
+    expect(path).toContain('Limit=25');
+    expect(path).toContain('SortBy=DateCreated');
+    expect(path).toContain('SortOrder=Descending');
   });
 
-  it('should include auth token in header', async () => {
-    mockFetch(mockLibraryResponse);
+  it('should pass token to makeRequest', async () => {
+    mockMakeRequest.mockResolvedValue(mockLibraryResponse);
 
     await fetchMovieList(SERVER_URL, TOKEN, USER_ID);
 
-    const callHeaders = (fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].headers;
-    expect(callHeaders['X-Emby-Authorization']).toContain(`Token="${TOKEN}"`);
-  });
-
-  it('should throw LibraryError unauthorized on 401', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('', { status: 401 }),
+    expect(mockMakeRequest).toHaveBeenCalledWith(
+      SERVER_URL,
+      expect.any(String),
+      TOKEN,
     );
-
-    await expect(
-      fetchMovieList(SERVER_URL, TOKEN, USER_ID),
-    ).rejects.toThrow(LibraryError);
-
-    await expect(
-      fetchMovieList(SERVER_URL, TOKEN, USER_ID),
-    ).rejects.toMatchObject({ type: 'unauthorized' });
   });
 
-  it('should throw LibraryError not-found on 404', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('', { status: 404 }),
-    );
+  it('should throw LibraryError unauthorized with message on 401', async () => {
+    mockMakeRequest.mockRejectedValue(new Response('', { status: 401 }));
 
     await expect(
       fetchMovieList(SERVER_URL, TOKEN, USER_ID),
-    ).rejects.toMatchObject({ type: 'not-found' });
+    ).rejects.toMatchObject({
+      type: 'unauthorized',
+      message: 'Session expired — please sign in again',
+    });
   });
 
-  it('should throw LibraryError network on TypeError', async () => {
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('fetch failed'));
+  it('should throw LibraryError not-found with message on 404', async () => {
+    mockMakeRequest.mockRejectedValue(new Response('', { status: 404 }));
 
     await expect(
       fetchMovieList(SERVER_URL, TOKEN, USER_ID),
-    ).rejects.toMatchObject({ type: 'network' });
+    ).rejects.toMatchObject({
+      type: 'not-found',
+      message: 'Content not found',
+    });
   });
 
-  it('should throw LibraryError network on AbortError', async () => {
+  it('should throw LibraryError network with message on TypeError', async () => {
+    mockMakeRequest.mockRejectedValue(new TypeError('fetch failed'));
+
+    await expect(
+      fetchMovieList(SERVER_URL, TOKEN, USER_ID),
+    ).rejects.toMatchObject({
+      type: 'network',
+      message: "Can't connect to server — check your connection",
+    });
+  });
+
+  it('should throw LibraryError network with message on AbortError', async () => {
     const abortError = new Error('The operation was aborted');
     abortError.name = 'AbortError';
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(abortError);
+    mockMakeRequest.mockRejectedValue(abortError);
 
     await expect(
       fetchMovieList(SERVER_URL, TOKEN, USER_ID),
-    ).rejects.toMatchObject({ type: 'network' });
+    ).rejects.toMatchObject({
+      type: 'network',
+      message: 'Request timed out — try again',
+    });
   });
 
-  it('should throw LibraryError unknown on 500', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('', { status: 500 }),
-    );
+  it('should throw LibraryError unknown with message on 500', async () => {
+    mockMakeRequest.mockRejectedValue(new Response('', { status: 500 }));
 
     await expect(
       fetchMovieList(SERVER_URL, TOKEN, USER_ID),
-    ).rejects.toMatchObject({ type: 'unknown' });
+    ).rejects.toMatchObject({
+      type: 'unknown',
+      message: 'Something went wrong — try again',
+    });
+  });
+
+  it('should throw LibraryError on empty serverUrl', async () => {
+    await expect(
+      fetchMovieList('', TOKEN, USER_ID),
+    ).rejects.toThrow(LibraryError);
+  });
+
+  it('should throw LibraryError on empty userId', async () => {
+    await expect(
+      fetchMovieList(SERVER_URL, TOKEN, ''),
+    ).rejects.toThrow(LibraryError);
   });
 });
 
 describe('fetchMovieDetails', () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should fetch movie details', async () => {
-    mockFetch(mockMovieDetails);
+    mockMakeRequest.mockResolvedValue(mockMovieDetails);
 
     const result = await fetchMovieDetails(SERVER_URL, TOKEN, USER_ID, 'movie-1');
 
     expect(result).toEqual(mockMovieDetails);
-    const url = (fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    expect(url).toContain(`/Users/${USER_ID}/Items/movie-1`);
+    const path = mockMakeRequest.mock.calls[0][1] as string;
+    expect(path).toContain(`/Users/${USER_ID}/Items/movie-1`);
   });
 
-  it('should throw LibraryError on 404', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('', { status: 404 }),
+  it('should pass token to makeRequest', async () => {
+    mockMakeRequest.mockResolvedValue(mockMovieDetails);
+
+    await fetchMovieDetails(SERVER_URL, TOKEN, USER_ID, 'movie-1');
+
+    expect(mockMakeRequest).toHaveBeenCalledWith(
+      SERVER_URL,
+      expect.any(String),
+      TOKEN,
     );
+  });
+
+  it('should throw LibraryError not-found with message on 404', async () => {
+    mockMakeRequest.mockRejectedValue(new Response('', { status: 404 }));
 
     await expect(
       fetchMovieDetails(SERVER_URL, TOKEN, USER_ID, 'nonexistent'),
-    ).rejects.toMatchObject({ type: 'not-found' });
+    ).rejects.toMatchObject({
+      type: 'not-found',
+      message: 'Content not found',
+    });
+  });
+
+  it('should throw LibraryError on empty movieId', async () => {
+    await expect(
+      fetchMovieDetails(SERVER_URL, TOKEN, USER_ID, ''),
+    ).rejects.toThrow(LibraryError);
   });
 });
 
 describe('fetchLibraryCategories', () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should fetch genres', async () => {
-    mockFetch(mockGenresResponse);
+    mockMakeRequest.mockResolvedValue(mockGenresResponse);
+
+    const result = await fetchLibraryCategories(SERVER_URL, TOKEN, USER_ID);
+
+    expect(result).toEqual(mockGenresResponse);
+    const path = mockMakeRequest.mock.calls[0][1] as string;
+    expect(path).toContain('/Genres?');
+    expect(path).toContain('IncludeItemTypes=Movie');
+    expect(path).toContain(`UserId=${USER_ID}`);
+  });
+
+  it('should pass token to makeRequest', async () => {
+    mockMakeRequest.mockResolvedValue(mockGenresResponse);
+
+    await fetchLibraryCategories(SERVER_URL, TOKEN, USER_ID);
+
+    expect(mockMakeRequest).toHaveBeenCalledWith(
+      SERVER_URL,
+      expect.any(String),
+      TOKEN,
+    );
+  });
+
+  it('should work without userId', async () => {
+    mockMakeRequest.mockResolvedValue(mockGenresResponse);
 
     const result = await fetchLibraryCategories(SERVER_URL, TOKEN);
 
     expect(result).toEqual(mockGenresResponse);
-    const url = (fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
-    expect(url).toContain('/Genres?');
-    expect(url).toContain('IncludeItemTypes=Movie');
+    const path = mockMakeRequest.mock.calls[0][1] as string;
+    expect(path).not.toContain('UserId=');
   });
 
-  it('should throw LibraryError on 401', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('', { status: 401 }),
-    );
+  it('should throw LibraryError unauthorized with message on 401', async () => {
+    mockMakeRequest.mockRejectedValue(new Response('', { status: 401 }));
 
     await expect(
-      fetchLibraryCategories(SERVER_URL, TOKEN),
-    ).rejects.toMatchObject({ type: 'unauthorized' });
+      fetchLibraryCategories(SERVER_URL, TOKEN, USER_ID),
+    ).rejects.toMatchObject({
+      type: 'unauthorized',
+      message: 'Session expired — please sign in again',
+    });
   });
 });
 

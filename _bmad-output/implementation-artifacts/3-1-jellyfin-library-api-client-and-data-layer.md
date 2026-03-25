@@ -1,6 +1,6 @@
 # Story 3.1: Jellyfin Library API Client & Data Layer
 
-Status: review
+Status: done
 
 ## Story
 
