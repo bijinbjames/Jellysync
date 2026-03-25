@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import type { JellyfinLibraryItem } from '@jellysync/shared';
+import type { SelectedMovie } from '@jellysync/shared';
 import { createWsMessage, ROOM_MESSAGE_TYPE, type RoomStatePayload } from '@jellysync/shared';
-import { useStore } from 'zustand';
 import { GlassHeader } from '../shared/components/glass-header';
+import { SwapConfirmSheet } from '../shared/components/swap-confirm-sheet';
 import { CategoryChips } from '../features/library/components/category-chips';
 import { PosterGrid } from '../features/library/components/poster-grid';
 import { useLibrary } from '../features/library/hooks/use-library';
@@ -18,15 +19,19 @@ export default function LibraryPage() {
   const { send, subscribe } = useWs();
 
   const fromLobby = searchParams.get('from') === 'lobby';
-  const roomCode = useStore(roomStore, (s) => s.roomCode);
+  const fromPlayer = searchParams.get('from') === 'player';
+  const isSwapContext = fromLobby || fromPlayer;
+  const roomCode = roomStore.getState().roomCode;
   const creatingRef = useRef(false);
+
+  const [pendingMovie, setPendingMovie] = useState<SelectedMovie | null>(null);
 
   const { movies, categories, selectedCategory, setCategory, isLoading, error, serverUrl } =
     useLibrary();
 
   // Subscribe to room:state to navigate to lobby after room creation
   useEffect(() => {
-    if (fromLobby) return; // Don't need this when changing movie in existing room
+    if (isSwapContext) return; // Don't need this when changing movie in existing room
 
     const unsub = subscribe(ROOM_MESSAGE_TYPE.STATE, (msg) => {
       const payload = msg.payload as RoomStatePayload;
@@ -34,10 +39,10 @@ export default function LibraryPage() {
       navigate(`/room/${payload.roomCode}`, { replace: true });
     });
     return unsub;
-  }, [fromLobby, subscribe, navigate]);
+  }, [isSwapContext, subscribe, navigate]);
 
   const handleMovieSelect = (item: JellyfinLibraryItem) => {
-    const movie = {
+    const movie: SelectedMovie = {
       id: item.Id,
       name: item.Name,
       year: item.ProductionYear,
@@ -45,18 +50,12 @@ export default function LibraryPage() {
       imageTag: item.ImageTags?.Primary,
     };
 
-    movieStore.getState().setMovie(movie);
-
-    // If navigating from lobby, broadcast selection to room and go back
-    if (fromLobby) {
-      send(createWsMessage(ROOM_MESSAGE_TYPE.MOVIE_SELECT, { movie }));
-      if (roomCode) {
-        navigate(-1);
-      } else {
-        navigate('/', { replace: true });
-      }
+    if (isSwapContext) {
+      setPendingMovie(movie);
       return;
     }
+
+    movieStore.getState().setMovie(movie);
 
     // Prevent double room creation on rapid taps
     if (creatingRef.current) return;
@@ -65,6 +64,22 @@ export default function LibraryPage() {
     // Create a new room
     const username = authStore.getState().username;
     send(createWsMessage(ROOM_MESSAGE_TYPE.CREATE, { displayName: username ?? 'User' }));
+  };
+
+  const handleConfirmSwap = () => {
+    if (!pendingMovie) return;
+    movieStore.getState().setMovie(pendingMovie);
+    send(createWsMessage(ROOM_MESSAGE_TYPE.MOVIE_SELECT, { movie: pendingMovie }));
+    setPendingMovie(null);
+    if (roomCode) {
+      navigate(`/room/${roomCode}`, { replace: true });
+    } else {
+      navigate('/', { replace: true });
+    }
+  };
+
+  const handleCancelSwap = () => {
+    setPendingMovie(null);
   };
 
   return (
@@ -96,6 +111,12 @@ export default function LibraryPage() {
           />
         </>
       )}
+      <SwapConfirmSheet
+        movieName={pendingMovie?.name ?? ''}
+        onConfirm={handleConfirmSwap}
+        onCancel={handleCancelSwap}
+        visible={pendingMovie !== null}
+      />
     </div>
   );
 }

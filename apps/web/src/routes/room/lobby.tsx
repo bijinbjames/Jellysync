@@ -25,8 +25,11 @@ export default function RoomLobbyPage() {
   const [autoJoining, setAutoJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | false>(false);
   const [roomClosed, setRoomClosed] = useState(false);
+  const [movieNotification, setMovieNotification] = useState<string | null>(null);
   const joinSentRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevMovieIdRef = useRef<string | null>(selectedMovie?.id ?? null);
+  const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connectionState = useStore(roomStore, (s) => s.connectionState);
 
@@ -50,6 +53,20 @@ export default function RoomLobbyPage() {
   const handleBrowseLibrary = () => {
     navigate('/library?from=lobby');
   };
+
+  // Detect movie change via store update (triggered by global room:state handler)
+  useEffect(() => {
+    const currentId = selectedMovie?.id ?? null;
+    if (prevMovieIdRef.current && currentId && currentId !== prevMovieIdRef.current) {
+      if (notificationTimerRef.current) clearTimeout(notificationTimerRef.current);
+      setMovieNotification(`Movie changed to ${selectedMovie!.name}`);
+      notificationTimerRef.current = setTimeout(() => {
+        setMovieNotification(null);
+        notificationTimerRef.current = null;
+      }, 3000);
+    }
+    prevMovieIdRef.current = currentId;
+  }, [selectedMovie]);
 
   // Subscribe to room:close — room destroyed by server
   useEffect(() => {
@@ -219,6 +236,12 @@ export default function RoomLobbyPage() {
             ))}
           </div>
         </div>
+
+        {movieNotification && (
+          <div className="bg-secondary/10 rounded-lg px-4 py-2">
+            <span className="text-on-surface font-body text-sm">{movieNotification}</span>
+          </div>
+        )}
 
         <MovieBriefCard />
 

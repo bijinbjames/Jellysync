@@ -38,6 +38,8 @@ generated: 2026-03-22
 last_updated: 2026-03-25
 # last_updated auto-set by dev-story workflow
 # last_updated auto-set by create-story workflow
+# last_updated auto-set by dev-story workflow
+# last_updated auto-set by create-story workflow
 project: myapp
 project_key: NOKEY
 tracking_system: file-system
@@ -67,7 +69,7 @@ development_status:
   3-1-jellyfin-library-api-client-and-data-layer: done
   3-2-library-browser-screen: done
   3-3-movie-selection-and-room-integration: done
-  3-4-mid-session-movie-swap: backlog
+  3-4-mid-session-movie-swap: done
   epic-3-retrospective: optional
 
   # Epic 4: Synchronized Playback
