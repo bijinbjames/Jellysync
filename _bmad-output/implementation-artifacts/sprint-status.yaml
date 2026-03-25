@@ -65,8 +65,8 @@ development_status:
   # Epic 3: Library Browsing & Movie Selection
   epic-3: in-progress
   3-1-jellyfin-library-api-client-and-data-layer: done
-  3-2-library-browser-screen: review
-  3-3-movie-selection-and-room-integration: review
+  3-2-library-browser-screen: done
+  3-3-movie-selection-and-room-integration: done
   3-4-mid-session-movie-swap: backlog
   epic-3-retrospective: optional
 

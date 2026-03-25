@@ -17,7 +17,7 @@ export function GlassHeader(props: GlassHeaderProps) {
   if (variant === 'navigation') {
     return (
       <View
-        className="glass px-6 pt-14 pb-4"
+        className="glass px-4 pt-12 pb-2"
         accessibilityRole="header"
       >
         <View className="flex-row items-center justify-between">
@@ -25,14 +25,14 @@ export function GlassHeader(props: GlassHeaderProps) {
             onPress={onBack}
             accessibilityRole="button"
             accessibilityLabel="Go back"
-            className="min-h-[48px] min-w-[48px] items-center justify-center"
+            className="min-h-[40px] min-w-[40px] items-center justify-center"
           >
-            <Text className="text-on-surface text-3xl">{'\u2190'}</Text>
+            <Text className="text-on-surface text-2xl">{'\u2190'}</Text>
           </Pressable>
-          <Text className="text-on-surface font-display text-base font-bold uppercase tracking-widest">
+          <Text className="text-on-surface font-display text-sm font-bold uppercase tracking-widest">
             {title}
           </Text>
-          <View className="w-12" />
+          <View className="w-10" />
         </View>
       </View>
     );
