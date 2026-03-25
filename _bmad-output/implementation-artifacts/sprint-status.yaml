@@ -36,6 +36,7 @@
 
 generated: 2026-03-22
 last_updated: 2026-03-25
+# last_updated auto-set by retrospective workflow
 # last_updated auto-set by dev-story workflow
 # last_updated auto-set by create-story workflow
 # last_updated auto-set by dev-story workflow
@@ -47,7 +48,7 @@ story_location: _bmad-output/implementation-artifacts
 
 development_status:
   # Epic 1: Project Foundation & Authentication
-  epic-1: in-progress
+  epic-1: done
   1-1-monorepo-initialization-and-shared-package-setup: done
   1-2-design-system-token-implementation: done
   1-3-jellyfin-authentication-flow: done
@@ -56,7 +57,7 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: Room Creation & Joining
-  epic-2: in-progress
+  epic-2: done
   2-1-signaling-server-and-websocket-foundation: done
   2-2-room-creation-and-lobby-screen: done
   2-3-join-room-via-code-entry: done
@@ -65,12 +66,12 @@ development_status:
   epic-2-retrospective: done
 
   # Epic 3: Library Browsing & Movie Selection
-  epic-3: in-progress
+  epic-3: done
   3-1-jellyfin-library-api-client-and-data-layer: done
   3-2-library-browser-screen: done
   3-3-movie-selection-and-room-integration: done
   3-4-mid-session-movie-swap: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   # Epic 4: Synchronized Playback
   epic-4: backlog

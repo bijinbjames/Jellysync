@@ -1,6 +1,6 @@
 # Story 3.4: Mid-Session Movie Swap
 
-Status: review
+Status: done
 
 ## Story
 

@@ -1,6 +1,6 @@
 # Story 2.2: Room Creation & Lobby Screen
 
-Status: review
+Status: done
 
 ## Story
 

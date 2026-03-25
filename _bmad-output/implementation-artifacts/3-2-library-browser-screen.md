@@ -1,6 +1,6 @@
 # Story 3.2: Library Browser Screen
 
-Status: review
+Status: done
 
 ## Story
 

@@ -1,6 +1,6 @@
 # Story 2.5: Room Lifecycle & Host Transfer
 
-Status: review
+Status: done
 
 ## Story
 

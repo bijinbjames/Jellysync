@@ -1,6 +1,6 @@
 # Story 3.3: Movie Selection & Room Integration
 
-Status: review
+Status: done
 
 ## Story
 

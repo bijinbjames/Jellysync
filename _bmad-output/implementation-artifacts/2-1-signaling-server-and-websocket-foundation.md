@@ -1,6 +1,6 @@
 # Story 2.1: Signaling Server & WebSocket Foundation
 
-Status: review
+Status: done
 
 ## Story
 
