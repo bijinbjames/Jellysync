@@ -45,6 +45,11 @@
   src: url("/fonts/Inter-SemiBold.woff2") format("woff2");
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   10% { transform: translateX(-10px); }

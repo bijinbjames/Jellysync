@@ -36,6 +36,8 @@
 
 generated: 2026-03-22
 last_updated: 2026-03-25
+# last_updated auto-set by dev-story workflow
+# last_updated auto-set by create-story workflow
 # last_updated auto-set by retrospective workflow
 # last_updated auto-set by dev-story workflow
 # last_updated auto-set by create-story workflow
@@ -74,8 +76,8 @@ development_status:
   epic-3-retrospective: done
 
   # Epic 4: Synchronized Playback
-  epic-4: backlog
-  4-1-video-player-foundation: backlog
+  epic-4: in-progress
+  4-1-video-player-foundation: done
   4-2-sync-engine-and-playback-coordination: backlog
   4-3-buffer-detection-and-communal-pause: backlog
   4-4-player-controls-and-host-permissions: backlog

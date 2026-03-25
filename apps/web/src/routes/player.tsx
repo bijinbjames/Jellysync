@@ -1,21 +1,33 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { useStore } from 'zustand';
+import { buildStreamUrl } from '@jellysync/shared';
 import { movieStore } from '../lib/movie';
 import { roomStore } from '../lib/room';
+import { authStore } from '../lib/auth';
+import { HtmlVideoPlayer, useHtmlVideo } from '../features/player';
 
 export default function PlayerPage() {
   const navigate = useNavigate();
   const selectedMovie = useStore(movieStore, (s) => s.selectedMovie);
   const isHost = useStore(roomStore, (s) => s.isHost);
   const roomCode = useStore(roomStore, (s) => s.roomCode);
+  const serverUrl = useStore(authStore, (s) => s.serverUrl);
+  const token = useStore(authStore, (s) => s.token);
   const prevMovieIdRef = useRef<string | null>(selectedMovie?.id ?? null);
 
+  const streamUrl = useMemo(() => {
+    if (!selectedMovie || !serverUrl || !token) return null;
+    return buildStreamUrl(serverUrl, token, selectedMovie.id);
+  }, [selectedMovie, serverUrl, token]);
+
+  const { videoRef } = useHtmlVideo(streamUrl);
+
   useEffect(() => {
-    if (!selectedMovie) {
+    if (!selectedMovie || !streamUrl) {
       navigate('/', { replace: true });
     }
-  }, [selectedMovie, navigate]);
+  }, [selectedMovie, streamUrl, navigate]);
 
   // Detect movie swap via global room:state handler — navigate back to lobby
   useEffect(() => {
@@ -30,34 +42,71 @@ export default function PlayerPage() {
     prevMovieIdRef.current = currentId;
   }, [selectedMovie, roomCode, navigate]);
 
-  if (!selectedMovie) return null;
+  if (!selectedMovie || !streamUrl) return null;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: '#0e0e0e' }}>
-      <h1 className="text-on-surface font-heading text-2xl font-bold text-center">
-        {selectedMovie.name}
-      </h1>
-      <p className="text-on-surface-variant font-body text-sm mt-2">
-        Playback coming in Epic 4
-      </p>
-      {isHost && (
+    <div style={containerStyle}>
+      <HtmlVideoPlayer videoRef={videoRef} streamUrl={streamUrl} />
+      <div style={topBarStyle}>
         <button
           type="button"
-          onClick={() => navigate('/library?from=player')}
-          aria-label="Change Movie"
-          className="mt-6 min-h-[48px] px-6 text-primary font-body text-sm font-medium cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => navigate(-1)}
+          aria-label="Back to lobby"
+          style={backButtonStyle}
         >
-          Change Movie
+          Back to Lobby
         </button>
-      )}
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        aria-label="Back to lobby"
-        className="mt-4 min-h-[48px] px-6 text-on-surface-variant font-body text-sm font-medium cursor-pointer hover:text-on-surface transition-colors"
-      >
-        Back to Lobby
-      </button>
+        {isHost && (
+          <button
+            type="button"
+            onClick={() => navigate('/library?from=player')}
+            aria-label="Change Movie"
+            style={changeButtonStyle}
+          >
+            Change Movie
+          </button>
+        )}
+      </div>
     </div>
   );
 }
+
+const containerStyle: React.CSSProperties = {
+  position: 'relative',
+  animation: 'fadeIn 300ms ease-in forwards',
+};
+
+const topBarStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: 48,
+  left: 16,
+  right: 16,
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  zIndex: 10,
+};
+
+const backButtonStyle: React.CSSProperties = {
+  minHeight: 48,
+  paddingLeft: 16,
+  paddingRight: 16,
+  color: '#CAC4D0',
+  fontSize: 14,
+  fontWeight: 500,
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+};
+
+const changeButtonStyle: React.CSSProperties = {
+  minHeight: 48,
+  paddingLeft: 16,
+  paddingRight: 16,
+  color: '#D0BCFF',
+  fontSize: 14,
+  fontWeight: 500,
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+};
