@@ -60,6 +60,14 @@
   animation: shake 0.4s ease-in-out;
 }
 
+@utility scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 body {
   margin: 0;
   min-width: 320px;

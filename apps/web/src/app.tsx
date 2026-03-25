@@ -9,6 +9,7 @@ import HomePage from './routes/index';
 import CreateRoomPage from './routes/create-room';
 import JoinPage from './routes/join';
 import RoomLobbyPage from './routes/room/lobby';
+import LibraryPage from './routes/library';
 
 const PENDING_DEEP_LINK_KEY = 'pendingDeepLink';
 const PENDING_DEEP_LINK_TS_KEY = 'pendingDeepLinkTimestamp';
@@ -97,6 +98,14 @@ export default function App() {
           element={
             <AuthenticatedRoutes>
               <CreateRoomPage />
+            </AuthenticatedRoutes>
+          }
+        />
+        <Route
+          path="/library"
+          element={
+            <AuthenticatedRoutes>
+              <LibraryPage />
             </AuthenticatedRoutes>
           }
         />

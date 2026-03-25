@@ -155,7 +155,8 @@ describe('Deep Link Auto-Join WS Readiness', () => {
     const store = createRoomStore();
     store.getState().setConnectionState('connecting');
 
-    const shouldSend = 'ABC123' && !store.getState().roomCode && store.getState().connectionState === 'connected';
+    const codeFromUrl: string | null = 'ABC123';
+    const shouldSend = codeFromUrl && !store.getState().roomCode && store.getState().connectionState === 'connected';
     expect(shouldSend).toBe(false);
   });
 });
