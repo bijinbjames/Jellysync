@@ -1,21 +1,71 @@
-import { View, Text } from 'react-native';
+import { View, Text, Image } from 'react-native';
+import { useStore } from 'zustand';
+import { getImageUrl, formatRuntime } from '@jellysync/shared';
+import { movieStore } from '../../../lib/movie';
+import { authStore } from '../../../lib/auth';
 
 export function MovieBriefCard() {
+  const selectedMovie = useStore(movieStore, (s) => s.selectedMovie);
+  const serverUrl = useStore(authStore, (s) => s.serverUrl);
+
+  if (!selectedMovie) {
+    return (
+      <View
+        className="flex-row bg-surface-container-low rounded-2xl p-4"
+        accessibilityLabel="No movie selected"
+      >
+        <View className="w-16 h-24 rounded-lg border border-dashed border-outline-variant/30 items-center justify-center">
+          <Text className="text-outline-variant text-2xl">{'\uD83C\uDFAC'}</Text>
+        </View>
+        <View className="flex-1 ml-4 justify-center">
+          <Text className="text-on-surface font-body text-sm font-medium">
+            No movie selected
+          </Text>
+          <Text className="text-outline font-body text-xs mt-1">
+            Browse the library to pick a movie
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const posterUrl = selectedMovie.imageTag && serverUrl
+    ? getImageUrl(serverUrl, selectedMovie.id, selectedMovie.imageTag, { fillWidth: 128, quality: 90 })
+    : undefined;
+
+  const metaParts: string[] = [];
+  if (selectedMovie.year) metaParts.push(String(selectedMovie.year));
+  if (selectedMovie.runtimeTicks) metaParts.push(formatRuntime(selectedMovie.runtimeTicks));
+  const metaLine = metaParts.join(' \u00B7 ');
+
   return (
     <View
       className="flex-row bg-surface-container-low rounded-2xl p-4"
-      accessibilityLabel="No movie selected"
+      accessibilityLabel={`Selected movie: ${selectedMovie.name}`}
     >
-      <View className="w-16 h-24 rounded-lg border border-dashed border-outline-variant/30 items-center justify-center">
-        <Text className="text-outline-variant text-2xl">{'\uD83C\uDFAC'}</Text>
+      <View className="w-16 h-24 rounded-md border border-outline-variant/30 overflow-hidden">
+        {posterUrl ? (
+          <Image
+            source={{ uri: posterUrl }}
+            className="w-full h-full"
+            resizeMode="cover"
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          <View className="w-full h-full bg-surface-container-high items-center justify-center">
+            <Text className="text-on-surface-variant text-2xl">{'\uD83C\uDFAC'}</Text>
+          </View>
+        )}
       </View>
       <View className="flex-1 ml-4 justify-center">
-        <Text className="text-on-surface font-body text-sm font-medium">
-          No movie selected
+        <Text className="text-on-surface font-display text-xl font-bold">
+          {selectedMovie.name}
         </Text>
-        <Text className="text-outline font-body text-xs mt-1">
-          Browse Library (coming in Epic 3)
-        </Text>
+        {metaLine ? (
+          <Text className="text-on-surface-variant font-body text-sm mt-1">
+            {metaLine}
+          </Text>
+        ) : null}
       </View>
     </View>
   );

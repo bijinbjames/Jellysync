@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { useStore } from 'zustand';
 import { authStore } from '../../lib/auth';
 import { roomStore } from '../../lib/room';
+import { movieStore } from '../../lib/movie';
 import { useWs } from '../../shared/providers/websocket-provider';
 import { createWsMessage, ROOM_MESSAGE_TYPE, ROOM_CONFIG, ERROR_CODE } from '@jellysync/shared';
 import { RoomCodeDisplay } from '../../features/room/components/room-code-display';
@@ -19,6 +20,7 @@ export default function RoomLobbyPage() {
   const roomCode = useStore(roomStore, (s) => s.roomCode);
   const participants = useStore(roomStore, (s) => s.participants);
   const isHost = useStore(roomStore, (s) => s.isHost);
+  const selectedMovie = useStore(movieStore, (s) => s.selectedMovie);
 
   const [autoJoining, setAutoJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | false>(false);
@@ -30,10 +32,23 @@ export default function RoomLobbyPage() {
 
   const emptySlots = Math.max(0, VISIBLE_SLOTS - participants.length);
 
+  const canStartMovie = selectedMovie !== null && participants.length >= 2;
+
   const handleLeaveRoom = () => {
     send(createWsMessage(ROOM_MESSAGE_TYPE.LEAVE, {}));
     roomStore.getState().clearRoom();
+    movieStore.getState().clearMovie();
     navigate('/');
+  };
+
+  const handleStartMovie = () => {
+    if (canStartMovie) {
+      navigate('/player');
+    }
+  };
+
+  const handleBrowseLibrary = () => {
+    navigate('/library?from=lobby');
   };
 
   // Subscribe to room:close — room destroyed by server
@@ -206,6 +221,33 @@ export default function RoomLobbyPage() {
         </div>
 
         <MovieBriefCard />
+
+        {isHost && (
+          <button
+            type="button"
+            onClick={handleBrowseLibrary}
+            aria-label={selectedMovie ? 'Change Movie' : 'Browse Library'}
+            className="min-h-[48px] text-on-surface-variant font-body text-sm font-medium cursor-pointer hover:text-on-surface transition-colors"
+          >
+            {selectedMovie ? 'Change Movie' : 'Browse Library'}
+          </button>
+        )}
+
+        {isHost && (
+          <button
+            type="button"
+            onClick={handleStartMovie}
+            disabled={!canStartMovie}
+            aria-label="Start Movie"
+            className={`gradient-primary rounded-md min-h-[48px] w-full font-display text-base font-bold text-on-primary ${
+              canStartMovie
+                ? 'cursor-pointer'
+                : 'opacity-50 cursor-not-allowed'
+            }`}
+          >
+            Start Movie
+          </button>
+        )}
 
         <div className="pt-4 flex justify-center">
           <button

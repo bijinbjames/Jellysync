@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useStore } from 'zustand';
 import { authStore } from '../../src/lib/auth';
 import { roomStore } from '../../src/lib/room';
+import { movieStore } from '../../src/lib/movie';
 import { useWs } from '../../src/shared/providers/websocket-provider';
 import { createWsMessage, ROOM_MESSAGE_TYPE, ROOM_CONFIG, ERROR_CODE } from '@jellysync/shared';
 import { RoomCodeDisplay } from '../../src/features/room/components/room-code-display';
@@ -20,6 +21,7 @@ export default function RoomLobbyScreen() {
   const roomCode = useStore(roomStore, (s) => s.roomCode);
   const participants = useStore(roomStore, (s) => s.participants);
   const isHost = useStore(roomStore, (s) => s.isHost);
+  const selectedMovie = useStore(movieStore, (s) => s.selectedMovie);
 
   const [autoJoining, setAutoJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | false>(false);
@@ -31,14 +33,27 @@ export default function RoomLobbyScreen() {
 
   const emptySlots = Math.max(0, VISIBLE_SLOTS - participants.length);
 
+  const canStartMovie = selectedMovie !== null && participants.length >= 2;
+
   const handleLeaveRoom = () => {
     send(createWsMessage(ROOM_MESSAGE_TYPE.LEAVE, {}));
     roomStore.getState().clearRoom();
+    movieStore.getState().clearMovie();
     if (router.canGoBack()) {
       router.back();
     } else {
       router.replace('/');
     }
+  };
+
+  const handleStartMovie = () => {
+    if (canStartMovie) {
+      router.push('/player' as any);
+    }
+  };
+
+  const handleBrowseLibrary = () => {
+    router.push('/library?from=lobby' as any);
   };
 
   // Subscribe to room:close — room destroyed by server
@@ -211,6 +226,35 @@ export default function RoomLobbyScreen() {
         </View>
 
         <MovieBriefCard />
+
+        {isHost && (
+          <Pressable
+            onPress={handleBrowseLibrary}
+            accessibilityRole="button"
+            accessibilityLabel={selectedMovie ? 'Change Movie' : 'Browse Library'}
+            className="min-h-[48px] items-center justify-center"
+          >
+            <Text className="text-on-surface-variant font-body text-sm font-medium">
+              {selectedMovie ? 'Change Movie' : 'Browse Library'}
+            </Text>
+          </Pressable>
+        )}
+
+        {isHost && (
+          <Pressable
+            onPress={handleStartMovie}
+            disabled={!canStartMovie}
+            accessibilityRole="button"
+            accessibilityLabel="Start Movie"
+            className={`gradient-primary rounded-md min-h-[48px] items-center justify-center w-full ${
+              canStartMovie ? '' : 'opacity-50'
+            }`}
+          >
+            <Text className="text-on-primary font-display text-base font-bold">
+              Start Movie
+            </Text>
+          </Pressable>
+        )}
 
         <View className="pt-4">
           <Pressable

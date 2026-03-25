@@ -5,12 +5,13 @@ export {
   fetchMovieDetails,
   fetchLibraryCategories,
   getImageUrl,
+  formatRuntime,
   type FetchMovieListOptions,
   type ImageUrlOptions,
 } from './library.js';
 export { buildStreamUrl, type StreamUrlOptions } from './streaming.js';
 export { useMovieList, useMovieDetails, useLibraryCategories } from './hooks.js';
-export { useLibrary, type UseLibraryResult } from './use-library.js';
+export { useLibrary, RECENTLY_ADDED_CATEGORY, type UseLibraryResult } from './use-library.js';
 export {
   AuthError,
   LibraryError,

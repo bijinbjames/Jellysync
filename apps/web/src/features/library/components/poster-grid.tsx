@@ -20,9 +20,9 @@ export function PosterGrid({
       <div
         role="list"
         aria-label="Loading movies"
-        className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-8 px-6 md:px-12"
+        className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-5 gap-y-8 px-6 md:px-12"
       >
-        {Array.from({ length: 9 }).map((_, i) => (
+        {Array.from({ length: 12 }).map((_, i) => (
           <div key={i} role="listitem">
             <PosterShimmer />
           </div>
@@ -46,7 +46,7 @@ export function PosterGrid({
     <div
       role="list"
       aria-label="Movie library"
-      className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-8 px-6 md:px-12"
+      className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-5 gap-y-8 px-6 md:px-12"
     >
       {movies.map((item) => (
         <div key={item.Id} role="listitem">

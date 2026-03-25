@@ -10,6 +10,7 @@ import CreateRoomPage from './routes/create-room';
 import JoinPage from './routes/join';
 import RoomLobbyPage from './routes/room/lobby';
 import LibraryPage from './routes/library';
+import PlayerPage from './routes/player';
 
 const PENDING_DEEP_LINK_KEY = 'pendingDeepLink';
 const PENDING_DEEP_LINK_TS_KEY = 'pendingDeepLinkTimestamp';
@@ -106,6 +107,14 @@ export default function App() {
           element={
             <AuthenticatedRoutes>
               <LibraryPage />
+            </AuthenticatedRoutes>
+          }
+        />
+        <Route
+          path="/player"
+          element={
+            <AuthenticatedRoutes>
+              <PlayerPage />
             </AuthenticatedRoutes>
           }
         />

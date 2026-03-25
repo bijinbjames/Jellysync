@@ -1,4 +1,4 @@
-import { View, Text, FlatList } from 'react-native';
+import { View, Text, FlatList, Dimensions } from 'react-native';
 import type { JellyfinLibraryItem } from '@jellysync/shared';
 import { PosterCard } from './poster-card';
 import { PosterShimmer } from './poster-shimmer';
@@ -9,6 +9,14 @@ interface PosterGridProps {
   isLoading: boolean;
   onMoviePress?: (item: JellyfinLibraryItem) => void;
 }
+
+const NUM_COLUMNS = 3;
+const HORIZONTAL_PADDING = 16;
+const COLUMN_GAP = 12;
+const screenWidth = Dimensions.get('window').width;
+const itemWidth =
+  (screenWidth - HORIZONTAL_PADDING * 2 - COLUMN_GAP * (NUM_COLUMNS - 1)) /
+  NUM_COLUMNS;
 
 const SHIMMER_DATA = Array.from({ length: 9 }).map((_, i) => ({
   id: `shimmer-${i}`,
@@ -27,9 +35,9 @@ export function PosterGrid({
         accessibilityRole="list"
         accessibilityLabel="Loading movies"
       >
-        <View className="flex-row flex-wrap">
+        <View className="flex-row flex-wrap" style={{ gap: COLUMN_GAP }}>
           {SHIMMER_DATA.map((s) => (
-            <View key={s.id} className="w-1/3 px-2 mb-6">
+            <View key={s.id} style={{ width: itemWidth }}>
               <PosterShimmer />
             </View>
           ))}
@@ -53,14 +61,16 @@ export function PosterGrid({
     <FlatList
       data={movies}
       keyExtractor={(item) => item.Id}
-      numColumns={3}
-      contentContainerStyle={{ paddingHorizontal: 8 }}
-      columnWrapperStyle={{ gap: 8 }}
-      ItemSeparatorComponent={() => <View className="h-6" />}
+      numColumns={NUM_COLUMNS}
+      contentContainerStyle={{
+        paddingHorizontal: HORIZONTAL_PADDING,
+        rowGap: 20,
+      }}
+      columnWrapperStyle={{ gap: COLUMN_GAP }}
       accessibilityRole="list"
       accessibilityLabel="Movie library"
       renderItem={({ item }) => (
-        <View style={{ width: '33.33%' }} className="px-1">
+        <View style={{ width: itemWidth }}>
           <PosterCard
             item={item}
             serverUrl={serverUrl}

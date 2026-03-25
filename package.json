@@ -16,6 +16,13 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write ."
   },
+  "pnpm": {
+    "overrides": {
+      "react": "19.1.0",
+      "react-dom": "19.1.0",
+      "@types/react": "~19.1.17"
+    }
+  },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
     "eslint": "^9.39.4",

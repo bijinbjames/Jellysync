@@ -33,17 +33,17 @@ export function GlassHeader(props: GlassHeaderProps) {
 
   if (variant === 'navigation') {
     return (
-      <header className="glass px-6 py-4 sticky top-0 z-10">
+      <header className="glass px-6 py-5 sticky top-0 z-10">
         <div className="flex items-center justify-between max-w-screen-xl mx-auto">
           <button
             type="button"
             onClick={onBack}
             aria-label="Go back"
-            className="min-h-[48px] min-w-[48px] flex items-center justify-center cursor-pointer text-on-surface-variant hover:text-on-surface transition-colors"
+            className="min-h-[48px] min-w-[48px] flex items-center justify-center cursor-pointer text-on-surface hover:text-primary transition-colors"
           >
             <BackIcon />
           </button>
-          <span className="text-on-surface-variant font-body text-xs uppercase tracking-widest">
+          <span className="text-on-surface font-display text-base font-bold uppercase tracking-widest">
             {title}
           </span>
           <div className="w-12" />

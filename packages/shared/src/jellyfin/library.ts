@@ -116,6 +116,14 @@ export async function fetchLibraryCategories(
   }
 }
 
+export function formatRuntime(ticks: number): string {
+  const totalMinutes = Math.round(ticks / (10_000_000 * 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes}m`;
+  return `${hours}h ${minutes}m`;
+}
+
 export function getImageUrl(
   serverUrl: string,
   itemId: string,

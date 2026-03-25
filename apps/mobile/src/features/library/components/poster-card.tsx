@@ -24,7 +24,7 @@ export function PosterCard({ item, serverUrl, onPress }: PosterCardProps) {
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
-      toValue: 0.97,
+      toValue: 1.02,
       useNativeDriver: true,
     }).start();
   };

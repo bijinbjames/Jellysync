@@ -1,46 +1,17 @@
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useStore } from 'zustand';
 import { authStore } from '../lib/auth';
 import { GlassHeader } from '../shared/components/glass-header';
 import { ActionCard } from '../shared/components/action-card';
-import { useWs } from '../shared/providers/websocket-provider';
-import {
-  createWsMessage,
-  ROOM_MESSAGE_TYPE,
-  type RoomStatePayload,
-} from '@jellysync/shared';
 
 export default function HomePage() {
   const username = useStore(authStore, (s) => s.username);
   const serverUrl = useStore(authStore, (s) => s.serverUrl);
   const logout = useStore(authStore, (s) => s.logout);
   const navigate = useNavigate();
-  const { send, subscribe } = useWs();
-  const [creating, setCreating] = useState(false);
-
-  useEffect(() => {
-    const unsub = subscribe(ROOM_MESSAGE_TYPE.STATE, (msg) => {
-      if (!creating) return;
-      const payload = msg.payload as RoomStatePayload;
-      setCreating(false);
-      navigate(`/room/${payload.roomCode}`);
-    });
-
-    const unsubError = subscribe('error', () => {
-      setCreating(false);
-    });
-
-    return () => {
-      unsub();
-      unsubError();
-    };
-  }, [subscribe, creating, navigate]);
 
   const handleCreateRoom = () => {
-    if (creating) return;
-    setCreating(true);
-    send(createWsMessage(ROOM_MESSAGE_TYPE.CREATE, { displayName: username ?? 'User' }));
+    navigate('/library');
   };
 
   const handleJoinRoom = () => {

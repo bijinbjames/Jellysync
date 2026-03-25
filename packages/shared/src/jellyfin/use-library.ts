@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useMovieList, useLibraryCategories } from './hooks.js';
 import type { LibraryError } from './types.js';
 
+export const RECENTLY_ADDED_CATEGORY = '__recently_added__';
+
 export interface UseLibraryResult {
   movies: import('./types.js').JellyfinLibraryItem[];
   categories: import('./types.js').JellyfinGenre[];
@@ -21,12 +23,16 @@ export function useLibrary(
     undefined,
   );
 
+  const isRecentlyAdded = selectedCategory === RECENTLY_ADDED_CATEGORY;
+
   const {
     data: movieData,
     isLoading: isLoadingMovies,
     error: movieError,
   } = useMovieList(serverUrl, token, userId, {
-    genreId: selectedCategory,
+    genreId: isRecentlyAdded ? undefined : selectedCategory,
+    sortBy: isRecentlyAdded ? 'DateCreated' : undefined,
+    sortOrder: isRecentlyAdded ? 'Descending' : undefined,
   });
 
   const {

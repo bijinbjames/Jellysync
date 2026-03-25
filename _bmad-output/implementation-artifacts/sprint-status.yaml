@@ -36,6 +36,7 @@
 
 generated: 2026-03-22
 last_updated: 2026-03-25
+# last_updated auto-set by dev-story workflow
 # last_updated auto-set by create-story workflow
 project: myapp
 project_key: NOKEY
@@ -65,7 +66,7 @@ development_status:
   epic-3: in-progress
   3-1-jellyfin-library-api-client-and-data-layer: done
   3-2-library-browser-screen: review
-  3-3-movie-selection-and-room-integration: backlog
+  3-3-movie-selection-and-room-integration: review
   3-4-mid-session-movie-swap: backlog
   epic-3-retrospective: optional
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchMovieList, fetchMovieDetails, fetchLibraryCategories, getImageUrl } from './library.js';
+import { fetchMovieList, fetchMovieDetails, fetchLibraryCategories, getImageUrl, formatRuntime } from './library.js';
 import { LibraryError } from './types.js';
 
 vi.mock('./client.js', () => ({
@@ -301,5 +301,31 @@ describe('getImageUrl', () => {
     const url = getImageUrl('https://jellyfin.example.com///', 'movie-1', 'abc');
 
     expect(url).toMatch(/^https:\/\/jellyfin\.example\.com\/Items\//);
+  });
+});
+
+describe('formatRuntime', () => {
+  it('should format zero ticks as 0m', () => {
+    expect(formatRuntime(0)).toBe('0m');
+  });
+
+  it('should format ticks less than 1 hour as minutes only', () => {
+    // 45 minutes = 45 * 60 * 10,000,000
+    expect(formatRuntime(27_000_000_000)).toBe('45m');
+  });
+
+  it('should format ticks for exactly 1 hour', () => {
+    // 60 minutes = 60 * 60 * 10,000,000
+    expect(formatRuntime(36_000_000_000)).toBe('1h 0m');
+  });
+
+  it('should format multi-hour runtime', () => {
+    // 2h 15m = 135 * 60 * 10,000,000
+    expect(formatRuntime(81_000_000_000)).toBe('2h 15m');
+  });
+
+  it('should round fractional minutes', () => {
+    // 90.5 minutes worth of ticks
+    expect(formatRuntime(54_300_000_000)).toBe('1h 31m');
   });
 });
