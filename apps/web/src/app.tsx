@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router';
 import { useStore } from 'zustand';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { authStore } from './lib/auth';
+import { queryClient } from './lib/query-client';
 import { WebSocketProvider } from './shared/providers/websocket-provider';
 import LoginPage from './routes/login';
 import HomePage from './routes/index';
@@ -63,6 +65,7 @@ function AuthenticatedRoutes({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <Routes>
         <Route
@@ -108,5 +111,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+    </QueryClientProvider>
   );
 }

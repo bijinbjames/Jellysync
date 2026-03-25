@@ -14,6 +14,7 @@
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/manrope": "^0.4.2",
     "@expo/metro-runtime": "~6.1.2",
+    "@tanstack/react-query": "^5.75.0",
     "@jellysync/shared": "workspace:*",
     "@jellysync/ui": "workspace:*",
     "expo": "~54.0.33",

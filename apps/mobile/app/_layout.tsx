@@ -14,7 +14,9 @@ import {
   Inter_600SemiBold,
 } from '@expo-google-fonts/inter';
 import { useStore } from 'zustand';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { authStore } from '../src/lib/auth';
+import { queryClient } from '../src/lib/query-client';
 import { WebSocketProvider } from '../src/shared/providers/websocket-provider';
 
 SplashScreen.preventAutoHideAsync();
@@ -84,11 +86,13 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthGate>
-      <WebSocketProvider>
-        <Slot />
-      </WebSocketProvider>
-      <StatusBar style="light" />
-    </AuthGate>
+    <QueryClientProvider client={queryClient}>
+      <AuthGate>
+        <WebSocketProvider>
+          <Slot />
+        </WebSocketProvider>
+        <StatusBar style="light" />
+      </AuthGate>
+    </QueryClientProvider>
   );
 }

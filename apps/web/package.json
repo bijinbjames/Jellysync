@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.75.0",
     "@jellysync/shared": "workspace:*",
     "@jellysync/ui": "workspace:*",
     "@tailwindcss/vite": "^4.2.2",
