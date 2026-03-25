@@ -5,6 +5,7 @@ interface CategoryChipsProps {
   categories: JellyfinGenre[];
   selectedCategory: string | undefined;
   onSelect: (categoryId: string | undefined) => void;
+  isLoading?: boolean;
 }
 
 function Chip({
@@ -33,10 +34,13 @@ function Chip({
   );
 }
 
+const SHIMMER_WIDTHS = [72, 88, 64, 80, 96];
+
 export function CategoryChips({
   categories,
   selectedCategory,
   onSelect,
+  isLoading,
 }: CategoryChipsProps) {
   const isAllSelected = selectedCategory === undefined;
   const isRecentlyAdded = selectedCategory === RECENTLY_ADDED_CATEGORY;
@@ -48,23 +52,31 @@ export function CategoryChips({
       className="flex gap-2.5 overflow-x-auto px-6 md:px-12 py-4 mb-2 scrollbar-none"
     >
       <Chip
-        label="All"
-        isActive={isAllSelected}
-        onClick={() => onSelect(undefined)}
-      />
-      {categories.map((cat) => (
-        <Chip
-          key={cat.Id}
-          label={cat.Name}
-          isActive={selectedCategory === cat.Id}
-          onClick={() => onSelect(cat.Id)}
-        />
-      ))}
-      <Chip
         label="Recently Added"
         isActive={isRecentlyAdded}
         onClick={() => onSelect(RECENTLY_ADDED_CATEGORY)}
       />
+      <Chip
+        label="All"
+        isActive={isAllSelected}
+        onClick={() => onSelect(undefined)}
+      />
+      {isLoading && categories.length === 0
+        ? SHIMMER_WIDTHS.map((w, i) => (
+            <div
+              key={i}
+              className="shrink-0 h-[40px] rounded-full bg-surface-container-high animate-pulse"
+              style={{ width: w }}
+            />
+          ))
+        : categories.map((cat) => (
+            <Chip
+              key={cat.Id}
+              label={cat.Name}
+              isActive={selectedCategory === cat.Id}
+              onClick={() => onSelect(cat.Id)}
+            />
+          ))}
     </div>
   );
 }

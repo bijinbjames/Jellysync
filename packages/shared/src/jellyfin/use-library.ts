@@ -20,7 +20,7 @@ export function useLibrary(
   userId: string,
 ): UseLibraryResult {
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(
-    undefined,
+    RECENTLY_ADDED_CATEGORY,
   );
 
   const isRecentlyAdded = selectedCategory === RECENTLY_ADDED_CATEGORY;

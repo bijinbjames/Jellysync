@@ -15,6 +15,7 @@ import {
   type WsMessage,
   type RoomStatePayload,
   type Participant as SharedParticipant,
+  type RoomMovieSelectPayload,
 } from '@jellysync/shared';
 
 const MAX_DISPLAY_NAME_LENGTH = 50;
@@ -31,6 +32,7 @@ function roomToStatePayload(room: Room, forParticipantId?: string): RoomStatePay
     roomCode: room.code,
     hostId: room.hostId,
     participants,
+    movie: room.movie,
     ...(forParticipantId ? { participantId: forParticipantId } : {}),
   };
 }
@@ -211,6 +213,40 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
     }
   }
 
+  function handleMovieSelect(
+    socket: WebSocket,
+    msg: WsMessage,
+    log: FastifyInstance['log'],
+  ): void {
+    const participantId = connectionToParticipant.get(socket);
+    if (!participantId) {
+      sendTo(socket, createWsError(ERROR_CODE.NOT_IN_ROOM, ERROR_MESSAGE[ERROR_CODE.NOT_IN_ROOM], ROOM_MESSAGE_TYPE.MOVIE_SELECT));
+      return;
+    }
+
+    const room = roomManager.getRoomByParticipant(participantId);
+    if (!room) {
+      sendTo(socket, createWsError(ERROR_CODE.NOT_IN_ROOM, ERROR_MESSAGE[ERROR_CODE.NOT_IN_ROOM], ROOM_MESSAGE_TYPE.MOVIE_SELECT));
+      return;
+    }
+
+    if (room.hostId !== participantId) {
+      sendTo(socket, createWsError(ERROR_CODE.NOT_HOST, ERROR_MESSAGE[ERROR_CODE.NOT_HOST], ROOM_MESSAGE_TYPE.MOVIE_SELECT));
+      return;
+    }
+
+    const payload = msg.payload as RoomMovieSelectPayload;
+    const movie = payload?.movie ?? null;
+    room.movie = movie;
+
+    log.info({ roomCode: room.code, movieId: movie?.id ?? null }, 'Movie selected');
+
+    // Broadcast updated state to all participants
+    broadcastToRoom(room, (pid) =>
+      createWsMessage(ROOM_MESSAGE_TYPE.STATE, roomToStatePayload(room, pid)),
+    );
+  }
+
   function handleDisconnect(
     socket: WebSocket,
     log: FastifyInstance['log'],
@@ -283,6 +319,9 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
           break;
         case ROOM_MESSAGE_TYPE.LEAVE:
           handleRoomLeave(socket, server.log);
+          break;
+        case ROOM_MESSAGE_TYPE.MOVIE_SELECT:
+          handleMovieSelect(socket, data, server.log);
           break;
         default:
           sendTo(socket, createWsError(ERROR_CODE.UNKNOWN_MESSAGE_TYPE, ERROR_MESSAGE[ERROR_CODE.UNKNOWN_MESSAGE_TYPE], data.type));

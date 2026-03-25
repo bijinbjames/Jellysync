@@ -47,11 +47,24 @@ export interface RoomClosePayload {
   reason: string;
 }
 
+export interface RoomMoviePayload {
+  id: string;
+  name: string;
+  year?: number;
+  runtimeTicks?: number;
+  imageTag?: string;
+}
+
+export interface RoomMovieSelectPayload {
+  movie: RoomMoviePayload | null;
+}
+
 export interface RoomStatePayload {
   roomCode: string;
   hostId: string;
   participants: Participant[];
   participantId?: string;
+  movie?: RoomMoviePayload | null;
 }
 
 // --- Discriminated union types ---
@@ -80,13 +93,18 @@ export interface RoomStateMessage extends WsMessage<RoomStatePayload> {
   type: 'room:state';
 }
 
+export interface RoomMovieSelectMessage extends WsMessage<RoomMovieSelectPayload> {
+  type: 'room:movie:select';
+}
+
 export type RoomMessage =
   | RoomCreateMessage
   | RoomJoinMessage
   | RoomRejoinMessage
   | RoomLeaveMessage
   | RoomCloseMessage
-  | RoomStateMessage;
+  | RoomStateMessage
+  | RoomMovieSelectMessage;
 
 // --- Type guards ---
 
@@ -111,6 +129,7 @@ const ROOM_MESSAGE_TYPES = new Set([
   'room:leave',
   'room:close',
   'room:state',
+  'room:movie:select',
 ]);
 
 // Client-to-server only message types
@@ -119,6 +138,7 @@ const CLIENT_ROOM_MESSAGE_TYPES = new Set([
   'room:join',
   'room:rejoin',
   'room:leave',
+  'room:movie:select',
 ]);
 
 export function isValidRoomMessageType(type: string): boolean {

@@ -38,16 +38,19 @@ export default function LibraryScreen() {
   }, [fromLobby, subscribe, router]);
 
   const handleMovieSelect = (item: JellyfinLibraryItem) => {
-    movieStore.getState().setMovie({
+    const movie = {
       id: item.Id,
       name: item.Name,
       year: item.ProductionYear,
       runtimeTicks: item.RunTimeTicks,
       imageTag: item.ImageTags?.Primary,
-    });
+    };
 
-    // If navigating from lobby, just go back
+    movieStore.getState().setMovie(movie);
+
+    // If navigating from lobby, broadcast selection to room and go back
     if (fromLobby) {
+      send(createWsMessage(ROOM_MESSAGE_TYPE.MOVIE_SELECT, { movie }));
       if (roomCode) {
         router.back();
       } else {
@@ -84,6 +87,7 @@ export default function LibraryScreen() {
             categories={categories}
             selectedCategory={selectedCategory}
             onSelect={setCategory}
+            isLoading={isLoading}
           />
           <PosterGrid
             movies={movies}

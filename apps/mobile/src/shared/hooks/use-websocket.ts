@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useStore } from 'zustand';
 import { authStore } from '../../lib/auth';
 import { roomStore } from '../../lib/room';
+import { movieStore } from '../../lib/movie';
 import {
   isWsMessage,
   WS_RECONNECT,
@@ -56,6 +57,15 @@ export function useWebSocket(): UseWebSocket {
       }
 
       setRoom(payload.roomCode, payload.hostId, payload.participants);
+
+      // Sync movie selection from server state
+      if (payload.movie !== undefined) {
+        if (payload.movie) {
+          movieStore.getState().setMovie(payload.movie);
+        } else {
+          movieStore.getState().clearMovie();
+        }
+      }
     }
 
     // Clear room store on room:close (room destroyed by server)
