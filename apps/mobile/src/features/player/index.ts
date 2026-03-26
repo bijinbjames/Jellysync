@@ -2,3 +2,7 @@ export { useVideoPlayer } from './hooks/use-video-player.js';
 export { usePlaybackSync } from './hooks/use-playback-sync.js';
 export { VideoPlayerView } from './components/video-player-view.js';
 export { SyncStatusChip } from './components/sync-status-chip.js';
+export { GlassPlayerControls } from './components/glass-player-controls.js';
+export { ParticipantAvatars } from './components/participant-avatars.js';
+export { PermissionSettings } from './components/permission-settings.js';
+export { useControlsVisibility } from './hooks/use-controls-visibility.js';

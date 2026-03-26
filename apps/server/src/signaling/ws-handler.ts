@@ -7,6 +7,7 @@ import {
   isWsMessage,
   isClientRoomMessageType,
   isClientSyncMessageType,
+  isClientParticipantMessageType,
   createWsError,
   createWsMessage,
   ERROR_CODE,
@@ -21,6 +22,7 @@ import {
   type RoomMovieSelectPayload,
 } from '@jellysync/shared';
 import { createSyncHandler } from '../sync/sync-handler.js';
+import { createPermissionHandler } from '../rooms/permissions.js';
 
 const MAX_DISPLAY_NAME_LENGTH = 50;
 
@@ -44,6 +46,7 @@ function roomToStatePayload(room: Room, forParticipantId?: string): RoomStatePay
           lastUpdated: room.playbackState.lastUpdated,
         }
       : null,
+    permissions: room.permissions,
     ...(forParticipantId ? { participantId: forParticipantId } : {}),
   };
 }
@@ -82,6 +85,13 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
   }
 
   const syncHandler = createSyncHandler({
+    roomManager,
+    getParticipantId: (socket) => connectionToParticipant.get(socket),
+    sendTo,
+    broadcastToRoom,
+  });
+
+  const permissionHandler = createPermissionHandler({
     roomManager,
     getParticipantId: (socket) => connectionToParticipant.get(socket),
     sendTo,
@@ -358,6 +368,11 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
 
       if (isClientSyncMessageType(data.type)) {
         syncHandler.handleSyncMessage(socket, data);
+        return;
+      }
+
+      if (isClientParticipantMessageType(data.type)) {
+        permissionHandler.handleParticipantMessage(socket, data);
         return;
       }
 

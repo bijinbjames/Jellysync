@@ -67,6 +67,7 @@ export interface RoomStatePayload {
   participantId?: string;
   movie?: RoomMoviePayload | null;
   playback?: PlaybackStatePayload | null;
+  permissions?: ParticipantPermissions;
 }
 
 // --- Sync message payloads ---
@@ -102,6 +103,18 @@ export interface SyncStatePayload {
   positionMs: number;
   isPlaying: boolean;
   serverTimestamp: number;
+}
+
+// --- Participant message payloads ---
+
+export interface ParticipantPermissions {
+  canPlayPause: boolean;
+  canSeek: boolean;
+}
+
+export interface PermissionUpdatePayload {
+  permissions: ParticipantPermissions;
+  updatedBy: string;
 }
 
 // --- Playback state in room:state ---
@@ -185,6 +198,14 @@ export type SyncMessage =
   | SyncBufferStartMessage
   | SyncBufferEndMessage;
 
+// --- Participant discriminated union types ---
+
+export interface PermissionUpdateMessage extends WsMessage<PermissionUpdatePayload> {
+  type: 'participant:permission-update';
+}
+
+export type ParticipantMessage = PermissionUpdateMessage;
+
 // --- Type guards ---
 
 export function isWsMessage(data: unknown): data is WsMessage {
@@ -257,6 +278,37 @@ export function isValidSyncMessageType(type: string): boolean {
 
 export function isClientSyncMessageType(type: string): boolean {
   return CLIENT_SYNC_MESSAGE_TYPES.has(type);
+}
+
+// --- Participant type guards ---
+
+const PARTICIPANT_MESSAGE_TYPES = new Set([
+  'participant:permission-update',
+]);
+
+const CLIENT_PARTICIPANT_MESSAGE_TYPES = new Set([
+  'participant:permission-update',
+]);
+
+export function isParticipantMessage(msg: WsMessage): msg is ParticipantMessage {
+  return typeof msg.type === 'string' && msg.type.startsWith('participant:');
+}
+
+export function isValidParticipantMessageType(type: string): boolean {
+  return PARTICIPANT_MESSAGE_TYPES.has(type);
+}
+
+export function isClientParticipantMessageType(type: string): boolean {
+  return CLIENT_PARTICIPANT_MESSAGE_TYPES.has(type);
+}
+
+export function isValidPermissionUpdatePayload(payload: unknown): payload is PermissionUpdatePayload {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.updatedBy !== 'string') return false;
+  if (typeof p.permissions !== 'object' || p.permissions === null) return false;
+  const perms = p.permissions as Record<string, unknown>;
+  return typeof perms.canPlayPause === 'boolean' && typeof perms.canSeek === 'boolean';
 }
 
 export function createWsMessage<T>(type: string, payload: T): WsMessage<T> {

@@ -35,6 +35,7 @@ export class RoomManager {
       movie: null,
       playbackState: null,
       bufferingParticipantId: null,
+      permissions: { canPlayPause: true, canSeek: true },
       createdAt: Date.now(),
     };
 

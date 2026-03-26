@@ -1,20 +1,38 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useStore } from 'zustand';
 import { buildStreamUrl } from '@jellysync/shared';
+import type { ParticipantPermissions } from '@jellysync/shared';
 import { movieStore } from '../lib/movie';
 import { roomStore } from '../lib/room';
 import { authStore } from '../lib/auth';
-import { HtmlVideoPlayer, useHtmlVideo, usePlaybackSync, SyncStatusChip } from '../features/player';
+import { syncStore } from '../lib/sync';
+import {
+  HtmlVideoPlayer,
+  useHtmlVideo,
+  usePlaybackSync,
+  GlassPlayerControls,
+  useControlsVisibility,
+  usePlayerKeyboard,
+  PermissionSettings,
+} from '../features/player';
 
 export default function PlayerPage() {
   const navigate = useNavigate();
   const selectedMovie = useStore(movieStore, (s) => s.selectedMovie);
   const isHost = useStore(roomStore, (s) => s.isHost);
   const roomCode = useStore(roomStore, (s) => s.roomCode);
+  const hostId = useStore(roomStore, (s) => s.hostId);
+  const participants = useStore(roomStore, (s) => s.participants);
   const serverUrl = useStore(authStore, (s) => s.serverUrl);
   const token = useStore(authStore, (s) => s.token);
+  const isPlaying = useStore(syncStore, (s) => s.isPlaying);
+  const currentPosition = useStore(syncStore, (s) => s.playbackPosition);
+  const duration = useStore(syncStore, (s) => s.duration);
+  const bufferProgress = useStore(syncStore, (s) => s.bufferProgress);
+  const permissions = useStore(syncStore, (s) => s.permissions);
   const prevMovieIdRef = useRef<string | null>(selectedMovie?.id ?? null);
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
 
   const streamUrl = useMemo(() => {
     if (!selectedMovie || !serverUrl || !token) return null;
@@ -22,7 +40,31 @@ export default function PlayerPage() {
   }, [selectedMovie, serverUrl, token]);
 
   const { videoRef, playerInterface } = useHtmlVideo(streamUrl);
-  usePlaybackSync(playerInterface);
+  const { requestPlay, requestPause, requestSeek, sendPermissionUpdate } = usePlaybackSync(playerInterface);
+  const { controlsVisible, toggle, resetTimer, hide } = useControlsVisibility();
+
+  usePlayerKeyboard({
+    isHost,
+    permissions,
+    isPlaying,
+    controlsVisible,
+    onPlay: requestPlay,
+    onPause: requestPause,
+    onSeek: requestSeek,
+    onHideControls: hide,
+  });
+
+  const handleOpenPermissions = useCallback(() => {
+    setPermissionsOpen(true);
+  }, []);
+
+  const handleClosePermissions = useCallback(() => {
+    setPermissionsOpen(false);
+  }, []);
+
+  const handleUpdatePermissions = useCallback((newPermissions: ParticipantPermissions) => {
+    sendPermissionUpdate(newPermissions);
+  }, [sendPermissionUpdate]);
 
   useEffect(() => {
     if (!selectedMovie || !streamUrl) {
@@ -48,29 +90,32 @@ export default function PlayerPage() {
   return (
     <div style={containerStyle}>
       <HtmlVideoPlayer videoRef={videoRef} streamUrl={streamUrl} />
-      <div style={topBarStyle}>
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          aria-label="Back to lobby"
-          style={backButtonStyle}
-        >
-          Back to Lobby
-        </button>
-        {isHost && (
-          <button
-            type="button"
-            onClick={() => navigate('/library?from=player')}
-            aria-label="Change Movie"
-            style={changeButtonStyle}
-          >
-            Change Movie
-          </button>
-        )}
-      </div>
-      <div style={bottomOverlayStyle}>
-        <SyncStatusChip />
-      </div>
+      <GlassPlayerControls
+        visible={controlsVisible}
+        isPlaying={isPlaying}
+        isHost={isHost}
+        permissions={permissions}
+        movieTitle={selectedMovie.name}
+        currentPosition={currentPosition}
+        duration={duration}
+        bufferProgress={bufferProgress}
+        participants={participants}
+        hostId={hostId ?? ''}
+        onToggleVisibility={toggle}
+        onResetTimer={resetTimer}
+        onPlay={requestPlay}
+        onPause={requestPause}
+        onSeek={requestSeek}
+        onBack={() => navigate(-1)}
+        onOpenPermissions={isHost ? handleOpenPermissions : undefined}
+      />
+      {permissionsOpen && (
+        <PermissionSettings
+          permissions={permissions}
+          onUpdatePermissions={handleUpdatePermissions}
+          onClose={handleClosePermissions}
+        />
+      )}
     </div>
   );
 }
@@ -78,50 +123,4 @@ export default function PlayerPage() {
 const containerStyle: React.CSSProperties = {
   position: 'relative',
   animation: 'fadeIn 300ms ease-in forwards',
-};
-
-const topBarStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: 48,
-  left: 16,
-  right: 16,
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  zIndex: 10,
-};
-
-const backButtonStyle: React.CSSProperties = {
-  minHeight: 48,
-  paddingLeft: 16,
-  paddingRight: 16,
-  color: '#CAC4D0',
-  fontSize: 14,
-  fontWeight: 500,
-  background: 'none',
-  border: 'none',
-  cursor: 'pointer',
-};
-
-const changeButtonStyle: React.CSSProperties = {
-  minHeight: 48,
-  paddingLeft: 16,
-  paddingRight: 16,
-  color: '#D0BCFF',
-  fontSize: 14,
-  fontWeight: 500,
-  background: 'none',
-  border: 'none',
-  cursor: 'pointer',
-};
-
-const bottomOverlayStyle: React.CSSProperties = {
-  position: 'absolute',
-  bottom: 24,
-  left: 0,
-  right: 0,
-  display: 'flex',
-  justifyContent: 'center',
-  zIndex: 10,
-  pointerEvents: 'none',
 };

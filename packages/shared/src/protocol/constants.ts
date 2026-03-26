@@ -2,6 +2,7 @@
 export const MESSAGE_NAMESPACE = {
   ROOM: 'room',
   SYNC: 'sync',
+  PARTICIPANT: 'participant',
 } as const;
 
 // Room message types
@@ -25,6 +26,11 @@ export const SYNC_MESSAGE_TYPE = {
   BUFFER_END: 'sync:buffer-end',
 } as const;
 
+// Participant message types
+export const PARTICIPANT_MESSAGE_TYPE = {
+  PERMISSION_UPDATE: 'participant:permission-update',
+} as const;
+
 // Sync engine constants
 export const SYNC_CONFIG = {
   SYNC_THRESHOLD_MS: 500,
@@ -44,6 +50,7 @@ export const ERROR_CODE = {
   ALREADY_IN_ROOM: 'ALREADY_IN_ROOM',
   NOT_IN_ROOM: 'NOT_IN_ROOM',
   NOT_HOST: 'NOT_HOST',
+  PERMISSION_DENIED: 'PERMISSION_DENIED',
   PARTICIPANT_NOT_FOUND: 'PARTICIPANT_NOT_FOUND',
   UNKNOWN_MESSAGE_TYPE: 'UNKNOWN_MESSAGE_TYPE',
 } as const;
@@ -57,6 +64,7 @@ export const ERROR_MESSAGE: Record<string, string> = {
   [ERROR_CODE.ALREADY_IN_ROOM]: 'You\'re already in a room.',
   [ERROR_CODE.NOT_IN_ROOM]: 'You\'re not in a room.',
   [ERROR_CODE.NOT_HOST]: 'Only the host can do that.',
+  [ERROR_CODE.PERMISSION_DENIED]: 'You do not have permission to do that.',
   [ERROR_CODE.PARTICIPANT_NOT_FOUND]: 'Could not find your session in the room.',
   [ERROR_CODE.UNKNOWN_MESSAGE_TYPE]: 'Unknown message type received.',
 };

@@ -46,6 +46,36 @@ export function createSyncHandler(deps: SyncHandlerDeps) {
     return { room, participantId };
   }
 
+  function getValidatedRoomWithPermission(
+    socket: WebSocket,
+    permission: 'canPlayPause' | 'canSeek',
+  ): { room: Room; participantId: string } | null {
+    const participantId = getParticipantId(socket);
+    if (!participantId) {
+      sendTo(socket, createWsError(ERROR_CODE.NOT_IN_ROOM, ERROR_MESSAGE[ERROR_CODE.NOT_IN_ROOM]));
+      return null;
+    }
+
+    const room = roomManager.getRoomByParticipant(participantId);
+    if (!room) {
+      sendTo(socket, createWsError(ERROR_CODE.NOT_IN_ROOM, ERROR_MESSAGE[ERROR_CODE.NOT_IN_ROOM]));
+      return null;
+    }
+
+    // Host always has full permissions
+    if (room.hostId === participantId) {
+      return { room, participantId };
+    }
+
+    // Non-host: check room-level permissions
+    if (!room.permissions[permission]) {
+      sendTo(socket, createWsError(ERROR_CODE.PERMISSION_DENIED, ERROR_MESSAGE[ERROR_CODE.PERMISSION_DENIED]));
+      return null;
+    }
+
+    return { room, participantId };
+  }
+
   function isValidPositionMs(value: unknown): value is number {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0;
   }
@@ -134,7 +164,7 @@ export function createSyncHandler(deps: SyncHandlerDeps) {
   }
 
   function handleSyncPlay(socket: WebSocket, msg: WsMessage): void {
-    const result = getValidatedRoom(socket);
+    const result = getValidatedRoomWithPermission(socket, 'canPlayPause');
     if (!result) return;
     if (!validateSyncPayload(socket, msg.payload)) return;
 
@@ -155,7 +185,7 @@ export function createSyncHandler(deps: SyncHandlerDeps) {
   }
 
   function handleSyncPause(socket: WebSocket, msg: WsMessage): void {
-    const result = getValidatedRoom(socket);
+    const result = getValidatedRoomWithPermission(socket, 'canPlayPause');
     if (!result) return;
     if (!validateSyncPayload(socket, msg.payload)) return;
 
@@ -176,7 +206,7 @@ export function createSyncHandler(deps: SyncHandlerDeps) {
   }
 
   function handleSyncSeek(socket: WebSocket, msg: WsMessage): void {
-    const result = getValidatedRoom(socket);
+    const result = getValidatedRoomWithPermission(socket, 'canSeek');
     if (!result) return;
     if (!validateSyncPayload(socket, msg.payload)) return;
 

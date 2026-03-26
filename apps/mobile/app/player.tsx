@@ -1,21 +1,38 @@
-import { useEffect, useRef, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
+import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
+import { StyleSheet, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useStore } from 'zustand';
 import { buildStreamUrl } from '@jellysync/shared';
+import type { ParticipantPermissions } from '@jellysync/shared';
 import { movieStore } from '../src/lib/movie';
 import { roomStore } from '../src/lib/room';
 import { authStore } from '../src/lib/auth';
-import { VideoPlayerView, useVideoPlayer, usePlaybackSync, SyncStatusChip } from '../src/features/player';
+import { syncStore } from '../src/lib/sync';
+import {
+  VideoPlayerView,
+  useVideoPlayer,
+  usePlaybackSync,
+  GlassPlayerControls,
+  useControlsVisibility,
+  PermissionSettings,
+} from '../src/features/player';
 
 export default function PlayerScreen() {
   const router = useRouter();
   const selectedMovie = useStore(movieStore, (s) => s.selectedMovie);
   const isHost = useStore(roomStore, (s) => s.isHost);
   const roomCode = useStore(roomStore, (s) => s.roomCode);
+  const hostId = useStore(roomStore, (s) => s.hostId);
+  const participants = useStore(roomStore, (s) => s.participants);
   const serverUrl = useStore(authStore, (s) => s.serverUrl);
   const token = useStore(authStore, (s) => s.token);
+  const isPlaying = useStore(syncStore, (s) => s.isPlaying);
+  const currentPosition = useStore(syncStore, (s) => s.playbackPosition);
+  const duration = useStore(syncStore, (s) => s.duration);
+  const bufferProgress = useStore(syncStore, (s) => s.bufferProgress);
+  const permissions = useStore(syncStore, (s) => s.permissions);
   const prevMovieIdRef = useRef<string | null>(selectedMovie?.id ?? null);
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -32,7 +49,20 @@ export default function PlayerScreen() {
   }, [selectedMovie, serverUrl, token]);
 
   const { player, playerInterface } = useVideoPlayer(streamUrl);
-  usePlaybackSync(playerInterface);
+  const { requestPlay, requestPause, requestSeek, sendPermissionUpdate } = usePlaybackSync(playerInterface);
+  const { controlsVisible, toggle, resetTimer, fadeAnim: controlsFadeAnim } = useControlsVisibility();
+
+  const handleOpenPermissions = useCallback(() => {
+    setPermissionsOpen(true);
+  }, []);
+
+  const handleClosePermissions = useCallback(() => {
+    setPermissionsOpen(false);
+  }, []);
+
+  const handleUpdatePermissions = useCallback((newPermissions: ParticipantPermissions) => {
+    sendPermissionUpdate(newPermissions);
+  }, [sendPermissionUpdate]);
 
   useEffect(() => {
     if (!selectedMovie) {
@@ -58,33 +88,33 @@ export default function PlayerScreen() {
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       <VideoPlayerView player={player} />
-      <View style={styles.topBar}>
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel="Back to lobby"
-          style={styles.backButton}
-        >
-          <Text style={styles.backButtonText}>
-            Back to Lobby
-          </Text>
-        </Pressable>
-        {isHost && (
-          <Pressable
-            onPress={() => router.push('/library?from=player' as any)}
-            accessibilityRole="button"
-            accessibilityLabel="Change Movie"
-            style={styles.changeButton}
-          >
-            <Text style={styles.changeButtonText}>
-              Change Movie
-            </Text>
-          </Pressable>
-        )}
-      </View>
-      <View style={styles.bottomOverlay}>
-        <SyncStatusChip />
-      </View>
+      <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: controlsVisible ? controlsFadeAnim : 0 }]} pointerEvents={controlsVisible ? 'auto' : 'box-none'}>
+        <GlassPlayerControls
+          visible={controlsVisible}
+          isPlaying={isPlaying}
+          isHost={isHost}
+          permissions={permissions}
+          movieTitle={selectedMovie.name}
+          currentPosition={currentPosition}
+          duration={duration}
+          bufferProgress={bufferProgress}
+          participants={participants}
+          hostId={hostId ?? ''}
+          onToggleVisibility={toggle}
+          onResetTimer={resetTimer}
+          onPlay={requestPlay}
+          onPause={requestPause}
+          onSeek={requestSeek}
+          onBack={() => router.back()}
+          onOpenPermissions={isHost ? handleOpenPermissions : undefined}
+        />
+      </Animated.View>
+      <PermissionSettings
+        visible={permissionsOpen}
+        permissions={permissions}
+        onUpdatePermissions={handleUpdatePermissions}
+        onClose={handleClosePermissions}
+      />
     </Animated.View>
   );
 }
@@ -93,45 +123,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0e0e0e',
-  },
-  topBar: {
-    position: 'absolute',
-    top: 48,
-    left: 16,
-    right: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  backButton: {
-    minHeight: 48,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonText: {
-    color: '#CAC4D0',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  changeButton: {
-    minHeight: 48,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  changeButtonText: {
-    color: '#D0BCFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  bottomOverlay: {
-    position: 'absolute',
-    bottom: 24,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 10,
   },
 });

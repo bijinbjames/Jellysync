@@ -1,4 +1,5 @@
 import { createStore } from 'zustand/vanilla';
+import type { ParticipantPermissions } from '../protocol/messages.js';
 
 export type SyncStatus = 'synced' | 'syncing' | 'drifted';
 
@@ -16,6 +17,8 @@ export interface SyncState {
   lastServerPosition: number;
   bufferPausedBy: string | null;
   pauseSource: PauseSource;
+  controlsVisible: boolean;
+  permissions: ParticipantPermissions;
 }
 
 export interface SyncActions {
@@ -27,10 +30,15 @@ export interface SyncActions {
   setBufferPause: (displayName: string) => void;
   clearBufferPause: () => void;
   setHostPause: () => void;
+  showControls: () => void;
+  hideControls: () => void;
+  setPermissions: (permissions: ParticipantPermissions) => void;
   reset: () => void;
 }
 
 export type SyncStore = SyncState & SyncActions;
+
+const defaultPermissions: ParticipantPermissions = { canPlayPause: true, canSeek: true };
 
 const initialState: SyncState = {
   playbackPosition: 0,
@@ -44,6 +52,8 @@ const initialState: SyncState = {
   lastServerPosition: 0,
   bufferPausedBy: null,
   pauseSource: null,
+  controlsVisible: false,
+  permissions: defaultPermissions,
 };
 
 export function createSyncStore() {
@@ -57,6 +67,9 @@ export function createSyncStore() {
     setBufferPause: (displayName) => set({ bufferPausedBy: displayName, pauseSource: 'buffer' }),
     clearBufferPause: () => set({ bufferPausedBy: null, pauseSource: null }),
     setHostPause: () => set({ pauseSource: 'host', bufferPausedBy: null }),
+    showControls: () => set({ controlsVisible: true }),
+    hideControls: () => set({ controlsVisible: false }),
+    setPermissions: (permissions) => set({ permissions }),
     reset: () => set(initialState),
   }));
 }

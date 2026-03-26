@@ -65,16 +65,43 @@ describe('sync-handler', () => {
       expect(sentErrors[0].code).toBe(ERROR_CODE.NOT_IN_ROOM);
     });
 
-    it('rejects message from non-host participant', () => {
+    it('allows play from non-host when permissions grant canPlayPause', () => {
       const handler = setupHandler();
       const room = roomManager.createRoom('host-1', 'Host');
+      roomManager.joinRoom(room.code, 'guest-1', 'Guest');
+      connectionMap.set(socket, 'guest-1');
+
+      // Default permissions: canPlayPause = true
+      const msg = createWsMessage(SYNC_MESSAGE_TYPE.PLAY, { positionMs: 0, serverTimestamp: 0 });
+      handler.handleSyncMessage(socket, msg);
+      expect(sentErrors).toHaveLength(0);
+      expect(broadcasts).toHaveLength(1);
+    });
+
+    it('rejects play from non-host when permissions deny canPlayPause', () => {
+      const handler = setupHandler();
+      const room = roomManager.createRoom('host-1', 'Host');
+      room.permissions = { canPlayPause: false, canSeek: false };
       roomManager.joinRoom(room.code, 'guest-1', 'Guest');
       connectionMap.set(socket, 'guest-1');
 
       const msg = createWsMessage(SYNC_MESSAGE_TYPE.PLAY, { positionMs: 0, serverTimestamp: 0 });
       handler.handleSyncMessage(socket, msg);
       expect(sentErrors).toHaveLength(1);
-      expect(sentErrors[0].code).toBe(ERROR_CODE.NOT_HOST);
+      expect(sentErrors[0].code).toBe(ERROR_CODE.PERMISSION_DENIED);
+    });
+
+    it('rejects seek from non-host when permissions deny canSeek', () => {
+      const handler = setupHandler();
+      const room = roomManager.createRoom('host-1', 'Host');
+      room.permissions = { canPlayPause: true, canSeek: false };
+      roomManager.joinRoom(room.code, 'guest-1', 'Guest');
+      connectionMap.set(socket, 'guest-1');
+
+      const msg = createWsMessage(SYNC_MESSAGE_TYPE.SEEK, { positionMs: 5000, serverTimestamp: 0 });
+      handler.handleSyncMessage(socket, msg);
+      expect(sentErrors).toHaveLength(1);
+      expect(sentErrors[0].code).toBe(ERROR_CODE.PERMISSION_DENIED);
     });
   });
 

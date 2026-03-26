@@ -60,10 +60,11 @@ describe('SyncEngine', () => {
       expect(player.play).toHaveBeenCalled();
     });
 
-    it('does nothing when not host', () => {
+    it('non-host with default permissions sends play (no optimistic local)', () => {
       isHost = false;
       engine.requestPlay();
-      expect(sentMessages).toHaveLength(0);
+      expect(sentMessages).toHaveLength(1);
+      expect(sentMessages[0].type).toBe(SYNC_MESSAGE_TYPE.PLAY);
       expect(player.play).not.toHaveBeenCalled();
     });
 
@@ -86,10 +87,11 @@ describe('SyncEngine', () => {
       expect(player.pause).toHaveBeenCalled();
     });
 
-    it('does nothing when not host', () => {
+    it('non-host with default permissions sends pause (no optimistic local)', () => {
       isHost = false;
       engine.requestPause();
-      expect(sentMessages).toHaveLength(0);
+      expect(sentMessages).toHaveLength(1);
+      expect(sentMessages[0].type).toBe(SYNC_MESSAGE_TYPE.PAUSE);
       expect(player.pause).not.toHaveBeenCalled();
     });
   });
@@ -107,10 +109,11 @@ describe('SyncEngine', () => {
       expect(player.seek).toHaveBeenCalledWith(10000);
     });
 
-    it('does nothing when not host', () => {
+    it('non-host with default permissions sends seek (no optimistic local)', () => {
       isHost = false;
       engine.requestSeek(10000);
-      expect(sentMessages).toHaveLength(0);
+      expect(sentMessages).toHaveLength(1);
+      expect(sentMessages[0].type).toBe(SYNC_MESSAGE_TYPE.SEEK);
       expect(player.seek).not.toHaveBeenCalled();
     });
   });
@@ -587,6 +590,104 @@ describe('SyncEngine', () => {
       const now = Date.now();
       engine.applyLateJoinState(10000, true, now);
       expect(serverStateChanges).toContainEqual({ positionMs: 10000, timestamp: now });
+    });
+  });
+
+  describe('permission enforcement', () => {
+    let permissionEngine: SyncEngine;
+    let permissions: { canPlayPause: boolean; canSeek: boolean };
+
+    beforeEach(() => {
+      permissions = { canPlayPause: true, canSeek: true };
+      permissionEngine = new SyncEngine({
+        playerInterface: player,
+        sendMessage: (msg) => sentMessages.push(msg),
+        getIsHost: () => isHost,
+        getPermissions: () => permissions,
+        onSyncStatusChange: (status) => syncStatusChanges.push(status),
+        onServerStateChange: (positionMs, timestamp) => serverStateChanges.push({ positionMs, timestamp }),
+      });
+    });
+
+    afterEach(() => {
+      permissionEngine.destroy();
+    });
+
+    it('non-host with canPlayPause can send play', () => {
+      isHost = false;
+      permissions = { canPlayPause: true, canSeek: false };
+      permissionEngine.requestPlay();
+      expect(sentMessages).toHaveLength(1);
+      expect(sentMessages[0].type).toBe(SYNC_MESSAGE_TYPE.PLAY);
+    });
+
+    it('non-host without canPlayPause cannot send play', () => {
+      isHost = false;
+      permissions = { canPlayPause: false, canSeek: true };
+      permissionEngine.requestPlay();
+      expect(sentMessages).toHaveLength(0);
+    });
+
+    it('non-host with canPlayPause can send pause', () => {
+      isHost = false;
+      permissions = { canPlayPause: true, canSeek: false };
+      permissionEngine.requestPause();
+      expect(sentMessages).toHaveLength(1);
+      expect(sentMessages[0].type).toBe(SYNC_MESSAGE_TYPE.PAUSE);
+    });
+
+    it('non-host without canPlayPause cannot send pause', () => {
+      isHost = false;
+      permissions = { canPlayPause: false, canSeek: true };
+      permissionEngine.requestPause();
+      expect(sentMessages).toHaveLength(0);
+    });
+
+    it('non-host with canSeek can send seek', () => {
+      isHost = false;
+      permissions = { canPlayPause: false, canSeek: true };
+      permissionEngine.requestSeek(5000);
+      expect(sentMessages).toHaveLength(1);
+      expect(sentMessages[0].type).toBe(SYNC_MESSAGE_TYPE.SEEK);
+    });
+
+    it('non-host without canSeek cannot send seek', () => {
+      isHost = false;
+      permissions = { canPlayPause: true, canSeek: false };
+      permissionEngine.requestSeek(5000);
+      expect(sentMessages).toHaveLength(0);
+    });
+
+    it('host can always play regardless of permissions', () => {
+      isHost = true;
+      permissions = { canPlayPause: false, canSeek: false };
+      permissionEngine.requestPlay();
+      expect(sentMessages).toHaveLength(1);
+    });
+
+    it('host can always seek regardless of permissions', () => {
+      isHost = true;
+      permissions = { canPlayPause: false, canSeek: false };
+      permissionEngine.requestSeek(5000);
+      expect(sentMessages).toHaveLength(1);
+    });
+
+    it('non-host with play permission does not apply optimistic local play', () => {
+      isHost = false;
+      permissions = { canPlayPause: true, canSeek: true };
+      permissionEngine.requestPlay();
+      // Non-host should not optimistically play — server broadcast will handle it
+      expect(player.play).not.toHaveBeenCalled();
+      expect(sentMessages).toHaveLength(1);
+    });
+
+    it('non-host with seek permission does not apply optimistic local seek', () => {
+      isHost = false;
+      permissions = { canPlayPause: true, canSeek: true };
+      permissionEngine.requestSeek(5000);
+      // Non-host should not optimistically seek — server broadcast will handle it
+      expect(player.seek).not.toHaveBeenCalled();
+      expect(sentMessages).toHaveLength(1);
     });
   });
 });

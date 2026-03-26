@@ -52,6 +52,14 @@ describe('syncStore', () => {
     it('has null pauseSource', () => {
       expect(store.getState().pauseSource).toBeNull();
     });
+
+    it('has controlsVisible false', () => {
+      expect(store.getState().controlsVisible).toBe(false);
+    });
+
+    it('has default permissions (all allowed)', () => {
+      expect(store.getState().permissions).toEqual({ canPlayPause: true, canSeek: true });
+    });
   });
 
   describe('setPlaybackState', () => {
@@ -212,6 +220,39 @@ describe('syncStore', () => {
     });
   });
 
+  describe('showControls / hideControls', () => {
+    it('showControls sets controlsVisible to true', () => {
+      store.getState().showControls();
+      expect(store.getState().controlsVisible).toBe(true);
+    });
+
+    it('hideControls sets controlsVisible to false', () => {
+      store.getState().showControls();
+      store.getState().hideControls();
+      expect(store.getState().controlsVisible).toBe(false);
+    });
+
+    it('toggle pattern: show then hide', () => {
+      store.getState().showControls();
+      expect(store.getState().controlsVisible).toBe(true);
+      store.getState().hideControls();
+      expect(store.getState().controlsVisible).toBe(false);
+    });
+  });
+
+  describe('setPermissions', () => {
+    it('updates permissions', () => {
+      store.getState().setPermissions({ canPlayPause: false, canSeek: false });
+      expect(store.getState().permissions).toEqual({ canPlayPause: false, canSeek: false });
+    });
+
+    it('can update individual permission values', () => {
+      store.getState().setPermissions({ canPlayPause: false, canSeek: true });
+      expect(store.getState().permissions.canPlayPause).toBe(false);
+      expect(store.getState().permissions.canSeek).toBe(true);
+    });
+  });
+
   describe('reset', () => {
     it('resets all state to initial values', () => {
       store.getState().setPlaybackState({ isPlaying: true, duration: 120000, playbackPosition: 50000, playbackRate: 1.5 });
@@ -219,6 +260,8 @@ describe('syncStore', () => {
       store.getState().setSyncStatus('drifted');
       store.getState().setServerState(5000, 1234567890);
       store.getState().setBufferPause('Alice');
+      store.getState().showControls();
+      store.getState().setPermissions({ canPlayPause: false, canSeek: false });
       store.getState().reset();
 
       const state = store.getState();
@@ -233,6 +276,8 @@ describe('syncStore', () => {
       expect(state.lastServerPosition).toBe(0);
       expect(state.bufferPausedBy).toBeNull();
       expect(state.pauseSource).toBeNull();
+      expect(state.controlsVisible).toBe(false);
+      expect(state.permissions).toEqual({ canPlayPause: true, canSeek: true });
     });
   });
 });

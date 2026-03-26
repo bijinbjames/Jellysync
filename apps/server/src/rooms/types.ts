@@ -1,4 +1,4 @@
-import type { Participant, RoomMoviePayload } from '@jellysync/shared';
+import type { Participant, RoomMoviePayload, ParticipantPermissions } from '@jellysync/shared';
 
 export type { Participant };
 
@@ -15,5 +15,6 @@ export interface Room {
   movie: RoomMoviePayload | null;
   playbackState: PlaybackState | null;
   bufferingParticipantId: string | null;
+  permissions: ParticipantPermissions;
   createdAt: number;
 }

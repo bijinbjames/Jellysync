@@ -2,3 +2,8 @@ export { useHtmlVideo } from './hooks/use-html-video.js';
 export { usePlaybackSync } from './hooks/use-playback-sync.js';
 export { HtmlVideoPlayer } from './components/html-video-player.js';
 export { SyncStatusChip } from './components/sync-status-chip.js';
+export { GlassPlayerControls } from './components/glass-player-controls.js';
+export { ParticipantAvatars } from './components/participant-avatars.js';
+export { PermissionSettings } from './components/permission-settings.js';
+export { useControlsVisibility } from './hooks/use-controls-visibility.js';
+export { usePlayerKeyboard } from './hooks/use-player-keyboard.js';

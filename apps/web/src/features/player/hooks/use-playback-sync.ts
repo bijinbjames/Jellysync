@@ -3,8 +3,11 @@ import { useStore } from 'zustand';
 import {
   SyncEngine,
   SYNC_MESSAGE_TYPE,
+  PARTICIPANT_MESSAGE_TYPE,
   type WsMessage,
   type RoomStatePayload,
+  type PermissionUpdatePayload,
+  type ParticipantPermissions,
 } from '@jellysync/shared';
 import type { PlayerInterface } from '@jellysync/shared';
 import { syncStore } from '../../../lib/sync.js';
@@ -22,6 +25,7 @@ export function usePlaybackSync(playerInterface: PlayerInterface) {
   sendRef.current = send;
 
   const getIsHost = useCallback(() => roomStore.getState().isHost, []);
+  const getPermissions = useCallback(() => syncStore.getState().permissions, []);
   const stableSend = useCallback((msg: WsMessage) => sendRef.current(msg), []);
   const getParticipantInfo = useCallback(() => {
     const state = roomStore.getState();
@@ -38,6 +42,7 @@ export function usePlaybackSync(playerInterface: PlayerInterface) {
       playerInterface,
       sendMessage: stableSend,
       getIsHost,
+      getPermissions,
       getParticipantInfo,
       onSyncStatusChange: (status) => {
         syncStore.getState().setSyncStatus(status);
@@ -69,7 +74,7 @@ export function usePlaybackSync(playerInterface: PlayerInterface) {
       syncEngineRef.current = null;
       initialPlaybackAppliedRef.current = false;
     };
-  }, [playerInterface, stableSend, getIsHost, getParticipantInfo]);
+  }, [playerInterface, stableSend, getIsHost, getPermissions, getParticipantInfo]);
 
   // Monitor buffer state transitions and report to sync engine
   useEffect(() => {
@@ -100,11 +105,17 @@ export function usePlaybackSync(playerInterface: PlayerInterface) {
     };
   }, [subscribe]);
 
-  // Handle late join: listen for room:state with playback data
+  // Handle late join: listen for room:state with playback data and permissions
   useEffect(() => {
     const unsub = subscribe('room:state', (msg: WsMessage) => {
-      if (initialPlaybackAppliedRef.current) return;
       const payload = msg.payload as RoomStatePayload;
+
+      // Apply permissions from room state (for late joiners and reconnects)
+      if (payload.permissions) {
+        syncStore.getState().setPermissions(payload.permissions);
+      }
+
+      if (initialPlaybackAppliedRef.current) return;
       if (payload.playback) {
         initialPlaybackAppliedRef.current = true;
         syncEngineRef.current?.applyLateJoinState(
@@ -113,6 +124,16 @@ export function usePlaybackSync(playerInterface: PlayerInterface) {
           payload.playback.lastUpdated,
         );
       }
+    });
+
+    return unsub;
+  }, [subscribe]);
+
+  // Subscribe to permission updates
+  useEffect(() => {
+    const unsub = subscribe(PARTICIPANT_MESSAGE_TYPE.PERMISSION_UPDATE, (msg: WsMessage) => {
+      const payload = msg.payload as PermissionUpdatePayload;
+      syncStore.getState().setPermissions(payload.permissions);
     });
 
     return unsub;
@@ -130,5 +151,22 @@ export function usePlaybackSync(playerInterface: PlayerInterface) {
     syncEngineRef.current?.requestSeek(positionMs);
   }, []);
 
-  return { requestPlay, requestPause, requestSeek, isHost };
+  const sendPermissionUpdate = useCallback((permissions: ParticipantPermissions) => {
+    const state = roomStore.getState();
+    if (!state.isHost) return;
+    sendRef.current(
+      {
+        type: PARTICIPANT_MESSAGE_TYPE.PERMISSION_UPDATE,
+        payload: {
+          permissions,
+          updatedBy: state.participantId ?? '',
+        } satisfies PermissionUpdatePayload,
+        timestamp: Date.now(),
+      },
+    );
+    // Optimistically update local state
+    syncStore.getState().setPermissions(permissions);
+  }, []);
+
+  return { requestPlay, requestPause, requestSeek, isHost, sendPermissionUpdate };
 }

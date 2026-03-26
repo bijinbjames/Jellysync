@@ -1,5 +1,5 @@
 import type { PlayerInterface } from '../types/playback.js';
-import type { WsMessage, SyncPlayPayload, SyncPausePayload, SyncSeekPayload, SyncBufferStartPayload, SyncBufferEndPayload } from '../protocol/messages.js';
+import type { WsMessage, SyncPlayPayload, SyncPausePayload, SyncSeekPayload, SyncBufferStartPayload, SyncBufferEndPayload, ParticipantPermissions } from '../protocol/messages.js';
 import { SYNC_MESSAGE_TYPE, SYNC_CONFIG } from '../protocol/constants.js';
 import { createWsMessage } from '../protocol/messages.js';
 
@@ -7,6 +7,7 @@ export interface SyncEngineOptions {
   playerInterface: PlayerInterface;
   sendMessage: (msg: WsMessage) => void;
   getIsHost: () => boolean;
+  getPermissions?: () => ParticipantPermissions;
   getParticipantInfo?: () => { participantId: string; displayName: string };
   onSyncStatusChange?: (status: 'synced' | 'syncing' | 'drifted') => void;
   onServerStateChange?: (positionMs: number, timestamp: number) => void;
@@ -18,6 +19,7 @@ export class SyncEngine {
   private player: PlayerInterface;
   private sendMessage: (msg: WsMessage) => void;
   private getIsHost: () => boolean;
+  private getPermissions: () => ParticipantPermissions;
   private getParticipantInfo?: () => { participantId: string; displayName: string };
   private onSyncStatusChange?: (status: 'synced' | 'syncing' | 'drifted') => void;
   private onServerStateChange?: (positionMs: number, timestamp: number) => void;
@@ -38,6 +40,7 @@ export class SyncEngine {
     this.player = options.playerInterface;
     this.sendMessage = options.sendMessage;
     this.getIsHost = options.getIsHost;
+    this.getPermissions = options.getPermissions ?? (() => ({ canPlayPause: true, canSeek: true }));
     this.getParticipantInfo = options.getParticipantInfo;
     this.onSyncStatusChange = options.onSyncStatusChange;
     this.onServerStateChange = options.onServerStateChange;
@@ -46,9 +49,11 @@ export class SyncEngine {
   }
 
   requestPlay(): void {
-    if (!this.getIsHost()) return;
+    if (!this.getIsHost() && !this.getPermissions().canPlayPause) return;
     const positionMs = this.player.getPosition();
-    this.player.play();
+    if (this.getIsHost()) {
+      this.player.play();
+    }
     this.sendMessage(createWsMessage(SYNC_MESSAGE_TYPE.PLAY, {
       positionMs,
       serverTimestamp: 0,
@@ -56,9 +61,11 @@ export class SyncEngine {
   }
 
   requestPause(): void {
-    if (!this.getIsHost()) return;
+    if (!this.getIsHost() && !this.getPermissions().canPlayPause) return;
     const positionMs = this.player.getPosition();
-    this.player.pause();
+    if (this.getIsHost()) {
+      this.player.pause();
+    }
     this.sendMessage(createWsMessage(SYNC_MESSAGE_TYPE.PAUSE, {
       positionMs,
       serverTimestamp: 0,
@@ -93,9 +100,11 @@ export class SyncEngine {
   }
 
   requestSeek(positionMs: number): void {
-    if (!this.getIsHost()) return;
-    this.player.seek(positionMs);
-    this.lastSeekTime = Date.now();
+    if (!this.getIsHost() && !this.getPermissions().canSeek) return;
+    if (this.getIsHost()) {
+      this.player.seek(positionMs);
+      this.lastSeekTime = Date.now();
+    }
     this.sendMessage(createWsMessage(SYNC_MESSAGE_TYPE.SEEK, {
       positionMs,
       serverTimestamp: 0,
