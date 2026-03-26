@@ -71,6 +71,7 @@ export function useVoice(): UseVoiceReturn {
     if (existing) {
       existing.pause();
       existing.srcObject = null;
+      existing.remove();
     }
 
     const audio = new Audio();
@@ -80,6 +81,11 @@ export function useVoice(): UseVoiceReturn {
     const storedVolume = voiceStore.getState().volumeLevels.get(pId) ?? 1.0;
     const gain = voiceStore.getState().voiceGain;
     audio.volume = Math.max(0, Math.min(1, storedVolume * gain));
+    // Append to DOM so the browser allocates audio output resources
+    document.body.appendChild(audio);
+    audio.play().catch(() => {
+      // Autoplay blocked — will play once user interacts with the page
+    });
     audioElementsRef.current.set(pId, audio);
   }, []);
 
@@ -197,6 +203,7 @@ export function useVoice(): UseVoiceReturn {
           if (audio) {
             audio.pause();
             audio.srcObject = null;
+            audio.remove();
             audioElementsRef.current.delete(peerId);
           }
         }
@@ -224,6 +231,7 @@ export function useVoice(): UseVoiceReturn {
       for (const [, audio] of audioElementsRef.current) {
         audio.pause();
         audio.srcObject = null;
+        audio.remove();
       }
       audioElementsRef.current.clear();
       voiceStore.getState().reset();

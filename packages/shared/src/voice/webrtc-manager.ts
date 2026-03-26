@@ -51,11 +51,12 @@ export class WebRTCManager {
       }
     };
 
-    // Handle remote tracks
+    // Handle remote tracks — when the remote sender has no track yet
+    // (e.g. addTransceiver before getUserMedia), event.streams is empty
+    // because there is no a=msid in the SDP. Fall back to wrapping event.track.
     pc.ontrack = (event) => {
-      if (event.streams[0]) {
-        this.callbacks.onRemoteStream(participantId, event.streams[0]);
-      }
+      const stream = event.streams[0] ?? new MediaStream([event.track]);
+      this.callbacks.onRemoteStream(participantId, stream);
     };
 
     // Handle connection state changes
@@ -94,6 +95,10 @@ export class WebRTCManager {
         this.callbacks.onConnectionStateChange(participantId, state);
       }
     };
+
+    // Ensure audio is always negotiated in the SDP even if mic isn't ready yet.
+    // addTrack below will reuse this transceiver when the local stream arrives.
+    pc.addTransceiver('audio', { direction: 'sendrecv' });
 
     // Add local stream tracks if available
     if (this.localStream) {
@@ -168,10 +173,22 @@ export class WebRTCManager {
     this.localStream = stream;
     this.callbacks.onLocalStream(stream);
 
-    // Add tracks to all existing peer connections
+    // Attach tracks to all existing peer connections.
+    // Use replaceTrack on existing transceivers (created by addTransceiver)
+    // to avoid triggering negotiationneeded after the initial offer/answer.
     for (const [, entry] of this.peers) {
       for (const track of stream.getTracks()) {
-        entry.connection.addTrack(track, stream);
+        const transceiver = entry.connection.getTransceivers().find(
+          (t) => t.sender.track === null && t.receiver.track?.kind === track.kind,
+        );
+        if (transceiver) {
+          transceiver.sender.replaceTrack(track).catch(() => {
+            // replaceTrack failed — fall back to addTrack
+            entry.connection.addTrack(track, stream);
+          });
+        } else {
+          entry.connection.addTrack(track, stream);
+        }
       }
     }
   }

@@ -7,7 +7,7 @@ import { SIGNAL_MESSAGE_TYPE } from '../protocol/constants.js';
 function createMockPeerConnection() {
   const pc = {
     onicecandidate: null as ((event: { candidate: unknown }) => void) | null,
-    ontrack: null as ((event: { streams: unknown[] }) => void) | null,
+    ontrack: null as ((event: { streams: unknown[]; track: unknown }) => void) | null,
     oniceconnectionstatechange: null as (() => void) | null,
     iceConnectionState: 'new' as string,
     localDescription: null as RTCSessionDescriptionInit | null,
@@ -20,6 +20,8 @@ function createMockPeerConnection() {
     setRemoteDescription: vi.fn().mockResolvedValue(undefined),
     addIceCandidate: vi.fn().mockResolvedValue(undefined),
     addTrack: vi.fn(),
+    addTransceiver: vi.fn(),
+    getTransceivers: vi.fn().mockReturnValue([]),
     close: vi.fn(),
     restartIce: vi.fn(),
   };
@@ -111,14 +113,28 @@ describe('WebRTCManager', () => {
       expect(callbacks.sendSignalingMessage).not.toHaveBeenCalled();
     });
 
-    it('sets up remote track handler', () => {
+    it('sets up remote track handler with stream', () => {
       manager.createPeerConnection('user-1');
       const pc = mockPCs[0];
       const mockStream = {} as MediaStream;
 
-      pc.ontrack!({ streams: [mockStream] });
+      pc.ontrack!({ streams: [mockStream], track: {} });
 
       expect(callbacks.onRemoteStream).toHaveBeenCalledWith('user-1', mockStream);
+    });
+
+    it('creates MediaStream from track when event.streams is empty', () => {
+      const mockCreatedStream = {} as MediaStream;
+      globalThis.MediaStream = vi.fn().mockImplementation(function () { return mockCreatedStream; }) as unknown as typeof MediaStream;
+
+      manager.createPeerConnection('user-1');
+      const pc = mockPCs[0];
+      const mockTrack = { kind: 'audio' };
+
+      pc.ontrack!({ streams: [], track: mockTrack });
+
+      expect(globalThis.MediaStream).toHaveBeenCalledWith([mockTrack]);
+      expect(callbacks.onRemoteStream).toHaveBeenCalledWith('user-1', mockCreatedStream);
     });
 
     it('reports non-error connection state changes immediately', () => {
@@ -320,16 +336,40 @@ describe('WebRTCManager', () => {
       expect(callbacks.onLocalStream).toHaveBeenCalledWith(mockStream);
     });
 
-    it('adds tracks to all existing peer connections', () => {
+    it('uses replaceTrack on existing transceivers', () => {
       manager.createPeerConnection('user-1');
       manager.createPeerConnection('user-2');
+
+      const mockReplaceTrack = vi.fn().mockResolvedValue(undefined);
+      const mockTransceiver = {
+        sender: { track: null },
+        receiver: { track: { kind: 'audio' } },
+      };
+      mockPCs[0].getTransceivers.mockReturnValue([mockTransceiver]);
+      mockPCs[0].addTrack = vi.fn(); // should NOT be called
+      // Give the transceiver a replaceTrack mock
+      mockTransceiver.sender.replaceTrack = mockReplaceTrack;
+
+      // Second PC has no matching transceiver — falls back to addTrack
+      mockPCs[1].getTransceivers.mockReturnValue([]);
+
+      const mockTrack = { kind: 'audio' } as MediaStreamTrack;
+      const mockStream = { getTracks: () => [mockTrack] } as unknown as MediaStream;
+      manager.addLocalStream(mockStream);
+
+      expect(mockReplaceTrack).toHaveBeenCalledWith(mockTrack);
+      expect(mockPCs[0].addTrack).not.toHaveBeenCalled();
+      expect(mockPCs[1].addTrack).toHaveBeenCalledWith(mockTrack, mockStream);
+    });
+
+    it('falls back to addTrack when no matching transceiver exists', () => {
+      manager.createPeerConnection('user-1');
 
       const mockTrack = { kind: 'audio' } as MediaStreamTrack;
       const mockStream = { getTracks: () => [mockTrack] } as unknown as MediaStream;
       manager.addLocalStream(mockStream);
 
       expect(mockPCs[0].addTrack).toHaveBeenCalledWith(mockTrack, mockStream);
-      expect(mockPCs[1].addTrack).toHaveBeenCalledWith(mockTrack, mockStream);
     });
   });
 
