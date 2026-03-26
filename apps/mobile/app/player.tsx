@@ -6,7 +6,7 @@ import { buildStreamUrl } from '@jellysync/shared';
 import { movieStore } from '../src/lib/movie';
 import { roomStore } from '../src/lib/room';
 import { authStore } from '../src/lib/auth';
-import { VideoPlayerView, useVideoPlayer } from '../src/features/player';
+import { VideoPlayerView, useVideoPlayer, usePlaybackSync } from '../src/features/player';
 
 export default function PlayerScreen() {
   const router = useRouter();
@@ -31,7 +31,8 @@ export default function PlayerScreen() {
     return buildStreamUrl(serverUrl, token, selectedMovie.id);
   }, [selectedMovie, serverUrl, token]);
 
-  const { player } = useVideoPlayer(streamUrl);
+  const { player, playerInterface } = useVideoPlayer(streamUrl);
+  usePlaybackSync(playerInterface);
 
   useEffect(() => {
     if (!selectedMovie) {

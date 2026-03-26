@@ -28,6 +28,7 @@ export interface Participant {
 
 export interface RoomCreatePayload {
   displayName: string;
+  movie?: RoomMoviePayload | null;
 }
 
 export interface RoomJoinPayload {
@@ -65,6 +66,38 @@ export interface RoomStatePayload {
   participants: Participant[];
   participantId?: string;
   movie?: RoomMoviePayload | null;
+  playback?: PlaybackStatePayload | null;
+}
+
+// --- Sync message payloads ---
+
+export interface SyncPlayPayload {
+  positionMs: number;
+  serverTimestamp: number;
+}
+
+export interface SyncPausePayload {
+  positionMs: number;
+  serverTimestamp: number;
+}
+
+export interface SyncSeekPayload {
+  positionMs: number;
+  serverTimestamp: number;
+}
+
+export interface SyncStatePayload {
+  positionMs: number;
+  isPlaying: boolean;
+  serverTimestamp: number;
+}
+
+// --- Playback state in room:state ---
+
+export interface PlaybackStatePayload {
+  positionMs: number;
+  isPlaying: boolean;
+  lastUpdated: number;
 }
 
 // --- Discriminated union types ---
@@ -105,6 +138,30 @@ export type RoomMessage =
   | RoomCloseMessage
   | RoomStateMessage
   | RoomMovieSelectMessage;
+
+// --- Sync discriminated union types ---
+
+export interface SyncPlayMessage extends WsMessage<SyncPlayPayload> {
+  type: 'sync:play';
+}
+
+export interface SyncPauseMessage extends WsMessage<SyncPausePayload> {
+  type: 'sync:pause';
+}
+
+export interface SyncSeekMessage extends WsMessage<SyncSeekPayload> {
+  type: 'sync:seek';
+}
+
+export interface SyncStateMessage extends WsMessage<SyncStatePayload> {
+  type: 'sync:state';
+}
+
+export type SyncMessage =
+  | SyncPlayMessage
+  | SyncPauseMessage
+  | SyncSeekMessage
+  | SyncStateMessage;
 
 // --- Type guards ---
 
@@ -147,6 +204,33 @@ export function isValidRoomMessageType(type: string): boolean {
 
 export function isClientRoomMessageType(type: string): boolean {
   return CLIENT_ROOM_MESSAGE_TYPES.has(type);
+}
+
+// --- Sync type guards ---
+
+const SYNC_MESSAGE_TYPES = new Set([
+  'sync:play',
+  'sync:pause',
+  'sync:seek',
+  'sync:state',
+]);
+
+const CLIENT_SYNC_MESSAGE_TYPES = new Set([
+  'sync:play',
+  'sync:pause',
+  'sync:seek',
+]);
+
+export function isSyncMessage(msg: WsMessage): msg is SyncMessage {
+  return typeof msg.type === 'string' && msg.type.startsWith('sync:');
+}
+
+export function isValidSyncMessageType(type: string): boolean {
+  return SYNC_MESSAGE_TYPES.has(type);
+}
+
+export function isClientSyncMessageType(type: string): boolean {
+  return CLIENT_SYNC_MESSAGE_TYPES.has(type);
 }
 
 export function createWsMessage<T>(type: string, payload: T): WsMessage<T> {

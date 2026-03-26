@@ -5,7 +5,7 @@ import { buildStreamUrl } from '@jellysync/shared';
 import { movieStore } from '../lib/movie';
 import { roomStore } from '../lib/room';
 import { authStore } from '../lib/auth';
-import { HtmlVideoPlayer, useHtmlVideo } from '../features/player';
+import { HtmlVideoPlayer, useHtmlVideo, usePlaybackSync } from '../features/player';
 
 export default function PlayerPage() {
   const navigate = useNavigate();
@@ -21,7 +21,8 @@ export default function PlayerPage() {
     return buildStreamUrl(serverUrl, token, selectedMovie.id);
   }, [selectedMovie, serverUrl, token]);
 
-  const { videoRef } = useHtmlVideo(streamUrl);
+  const { videoRef, playerInterface } = useHtmlVideo(streamUrl);
+  usePlaybackSync(playerInterface);
 
   useEffect(() => {
     if (!selectedMovie || !streamUrl) {

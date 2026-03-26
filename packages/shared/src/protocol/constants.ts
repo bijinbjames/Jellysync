@@ -1,6 +1,7 @@
 // Message namespace constants
 export const MESSAGE_NAMESPACE = {
   ROOM: 'room',
+  SYNC: 'sync',
 } as const;
 
 // Room message types
@@ -12,6 +13,24 @@ export const ROOM_MESSAGE_TYPE = {
   CLOSE: 'room:close',
   STATE: 'room:state',
   MOVIE_SELECT: 'room:movie:select',
+} as const;
+
+// Sync message types
+export const SYNC_MESSAGE_TYPE = {
+  PLAY: 'sync:play',
+  PAUSE: 'sync:pause',
+  SEEK: 'sync:seek',
+  STATE: 'sync:state',
+} as const;
+
+// Sync engine constants
+export const SYNC_CONFIG = {
+  SYNC_THRESHOLD_MS: 500,
+  FORCE_SEEK_THRESHOLD_MS: 2000,
+  DRIFT_CHECK_INTERVAL_MS: 2000,
+  MAX_CORRECTIONS_PER_WINDOW: 3,
+  CORRECTION_WINDOW_MS: 10000,
+  SEEK_SETTLE_MS: 2000,
 } as const;
 
 // Error codes

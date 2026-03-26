@@ -5,6 +5,7 @@ import { AuthError } from '../jellyfin/types.js';
 
 export interface AuthState {
   serverUrl: string | null;
+  signalingUrl: string | null;
   token: string | null;
   userId: string | null;
   username: string | null;
@@ -26,6 +27,7 @@ export type AuthStore = AuthState & AuthActions;
 
 const initialState: AuthState = {
   serverUrl: null,
+  signalingUrl: null,
   token: null,
   userId: null,
   username: null,
@@ -53,8 +55,12 @@ export function createAuthStore(storage: StateStorage) {
             try {
               const result = await authenticateWithJellyfin(serverUrl, username, password);
               if (currentRequestId !== loginRequestId) return;
+              // Derive signaling URL: same host as Jellyfin server but on port 3001
+              const url = new URL(result.serverUrl);
+              url.port = '3001';
               set({
                 serverUrl: result.serverUrl,
+                signalingUrl: url.origin,
                 token: result.token,
                 userId: result.userId,
                 username: result.username,
@@ -79,6 +85,7 @@ export function createAuthStore(storage: StateStorage) {
             loginRequestId++;
             set({
               serverUrl: null,
+              signalingUrl: null,
               token: null,
               userId: null,
               username: null,
@@ -103,6 +110,7 @@ export function createAuthStore(storage: StateStorage) {
         storage: createJSONStorage(() => storage),
         partialize: (state) => ({
           serverUrl: state.serverUrl,
+          signalingUrl: state.signalingUrl,
           token: state.token,
           userId: state.userId,
           username: state.username,
@@ -113,6 +121,16 @@ export function createAuthStore(storage: StateStorage) {
             console.warn('Auth store rehydration failed:', error);
           }
           if (_state) {
+            // Derive signalingUrl for sessions that were saved without it
+            if (_state.isAuthenticated && !_state.signalingUrl && _state.serverUrl) {
+              try {
+                const url = new URL(_state.serverUrl);
+                url.port = '3001';
+                storeSet?.({ signalingUrl: url.origin });
+              } catch {
+                // Invalid URL — signalingUrl stays null, WS hook falls back to serverUrl
+              }
+            }
             _state.setHydrated(true);
           } else if (storeSet) {
             storeSet({ isHydrated: true });

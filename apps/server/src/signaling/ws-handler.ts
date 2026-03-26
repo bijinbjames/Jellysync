@@ -6,6 +6,7 @@ import type { Room } from '../rooms/types.js';
 import {
   isWsMessage,
   isClientRoomMessageType,
+  isClientSyncMessageType,
   createWsError,
   createWsMessage,
   ERROR_CODE,
@@ -17,6 +18,7 @@ import {
   type Participant as SharedParticipant,
   type RoomMovieSelectPayload,
 } from '@jellysync/shared';
+import { createSyncHandler } from '../sync/sync-handler.js';
 
 const MAX_DISPLAY_NAME_LENGTH = 50;
 
@@ -33,6 +35,13 @@ function roomToStatePayload(room: Room, forParticipantId?: string): RoomStatePay
     hostId: room.hostId,
     participants,
     movie: room.movie,
+    playback: room.playbackState
+      ? {
+          positionMs: room.playbackState.positionMs,
+          isPlaying: room.playbackState.isPlaying,
+          lastUpdated: room.playbackState.lastUpdated,
+        }
+      : null,
     ...(forParticipantId ? { participantId: forParticipantId } : {}),
   };
 }
@@ -70,6 +79,13 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
     }
   }
 
+  const syncHandler = createSyncHandler({
+    roomManager,
+    getParticipantId: (socket) => connectionToParticipant.get(socket),
+    sendTo,
+    broadcastToRoom,
+  });
+
   function cancelGraceTimer(participantId: string): void {
     const timer = disconnectTimers.get(participantId);
     if (timer) {
@@ -83,7 +99,7 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
     msg: WsMessage,
     log: FastifyInstance['log'],
   ): void {
-    const payload = msg.payload as { displayName?: string };
+    const payload = msg.payload as { displayName?: string; movie?: { id: string; name: string } | null };
     const displayName = validateDisplayName(payload?.displayName);
     if (!displayName) {
       sendTo(socket, createWsError(ERROR_CODE.INVALID_PAYLOAD, ERROR_MESSAGE[ERROR_CODE.INVALID_PAYLOAD], ROOM_MESSAGE_TYPE.CREATE));
@@ -102,7 +118,13 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
     participantToConnection.set(participantId, socket);
 
     const room = roomManager.createRoom(participantId, displayName);
-    log.info({ roomCode: room.code, hostId: participantId }, 'Room created');
+
+    // Set initial movie if provided with room creation
+    if (payload.movie) {
+      room.movie = payload.movie as Room['movie'];
+    }
+
+    log.info({ roomCode: room.code, hostId: participantId, movieId: payload.movie?.id ?? null }, 'Room created');
 
     sendTo(socket, createWsMessage(ROOM_MESSAGE_TYPE.STATE, roomToStatePayload(room, participantId)));
   }
@@ -238,6 +260,7 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
     const payload = msg.payload as RoomMovieSelectPayload;
     const movie = payload?.movie ?? null;
     room.movie = movie;
+    room.playbackState = null;
 
     log.info({ roomCode: room.code, movieId: movie?.id ?? null }, 'Movie selected');
 
@@ -299,6 +322,11 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
 
       if (!isWsMessage(data)) {
         sendTo(socket, createWsError(ERROR_CODE.INVALID_MESSAGE, ERROR_MESSAGE[ERROR_CODE.INVALID_MESSAGE]));
+        return;
+      }
+
+      if (isClientSyncMessageType(data.type)) {
+        syncHandler.handleSyncMessage(socket, data);
         return;
       }
 

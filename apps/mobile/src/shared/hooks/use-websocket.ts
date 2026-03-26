@@ -27,6 +27,7 @@ function deriveWsUrl(serverUrl: string): string {
 
 export function useWebSocket(): UseWebSocket {
   const serverUrl = useStore(authStore, (s) => s.serverUrl);
+  const signalingUrl = useStore(authStore, (s) => s.signalingUrl);
   const isAuthenticated = useStore(authStore, (s) => s.isAuthenticated);
   const connectionState = useStore(roomStore, (s) => s.connectionState);
 
@@ -93,7 +94,7 @@ export function useWebSocket(): UseWebSocket {
   const connect = useCallback(() => {
     if (!serverUrl || !isAuthenticated) return;
 
-    const wsUrl = deriveWsUrl(serverUrl);
+    const wsUrl = deriveWsUrl(signalingUrl || serverUrl);
     roomStore.getState().setConnectionState('connecting');
 
     const ws = new WebSocket(wsUrl);
@@ -137,7 +138,7 @@ export function useWebSocket(): UseWebSocket {
     ws.onerror = () => {
       // onclose will fire after onerror
     };
-  }, [serverUrl, isAuthenticated, handleMessage]);
+  }, [serverUrl, signalingUrl, isAuthenticated, handleMessage]);
 
   const disconnect = useCallback(() => {
     intentionalCloseRef.current = true;
@@ -184,7 +185,7 @@ export function useWebSocket(): UseWebSocket {
     return () => {
       disconnect();
     };
-  }, [isAuthenticated, serverUrl, connect, disconnect]);
+  }, [isAuthenticated, serverUrl, signalingUrl, connect, disconnect]);
 
   return { connectionState, send, subscribe, disconnect };
 }

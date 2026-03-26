@@ -32,6 +32,18 @@ describe('syncStore', () => {
     it('has playback rate of 1', () => {
       expect(store.getState().playbackRate).toBe(1);
     });
+
+    it('has synced sync status', () => {
+      expect(store.getState().syncStatus).toBe('synced');
+    });
+
+    it('has zero last server timestamp', () => {
+      expect(store.getState().lastServerTimestamp).toBe(0);
+    });
+
+    it('has zero last server position', () => {
+      expect(store.getState().lastServerPosition).toBe(0);
+    });
   });
 
   describe('setPlaybackState', () => {
@@ -100,10 +112,38 @@ describe('syncStore', () => {
     });
   });
 
+  describe('setSyncStatus', () => {
+    it('updates sync status', () => {
+      store.getState().setSyncStatus('syncing');
+      expect(store.getState().syncStatus).toBe('syncing');
+    });
+
+    it('updates to drifted', () => {
+      store.getState().setSyncStatus('drifted');
+      expect(store.getState().syncStatus).toBe('drifted');
+    });
+  });
+
+  describe('setServerState', () => {
+    it('updates last server position and timestamp', () => {
+      store.getState().setServerState(5000, 1234567890);
+      expect(store.getState().lastServerPosition).toBe(5000);
+      expect(store.getState().lastServerTimestamp).toBe(1234567890);
+    });
+
+    it('does not affect other state', () => {
+      store.getState().setPlaybackState({ isPlaying: true });
+      store.getState().setServerState(5000, 1234567890);
+      expect(store.getState().isPlaying).toBe(true);
+    });
+  });
+
   describe('reset', () => {
     it('resets all state to initial values', () => {
       store.getState().setPlaybackState({ isPlaying: true, duration: 120000, playbackPosition: 50000, playbackRate: 1.5 });
       store.getState().setBufferState({ isBuffering: true, bufferProgress: 0.7 });
+      store.getState().setSyncStatus('drifted');
+      store.getState().setServerState(5000, 1234567890);
       store.getState().reset();
 
       const state = store.getState();
@@ -113,6 +153,9 @@ describe('syncStore', () => {
       expect(state.isBuffering).toBe(false);
       expect(state.bufferProgress).toBe(0);
       expect(state.playbackRate).toBe(1);
+      expect(state.syncStatus).toBe('synced');
+      expect(state.lastServerTimestamp).toBe(0);
+      expect(state.lastServerPosition).toBe(0);
     });
   });
 });

@@ -85,6 +85,8 @@ export function LoginForm() {
               placeholder="Password"
               placeholderTextColor="#869391"
               secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
               autoComplete="password"
             />
           </View>
