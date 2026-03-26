@@ -34,6 +34,7 @@ export class RoomManager {
       participants: new Map([[hostId, host]]),
       movie: null,
       playbackState: null,
+      bufferingParticipantId: null,
       createdAt: Date.now(),
     };
 

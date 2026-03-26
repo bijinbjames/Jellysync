@@ -79,11 +79,54 @@ describe('sync messages are not room messages', () => {
   });
 });
 
+describe('buffer message type guards', () => {
+  it('isSyncMessage returns true for sync:buffer-start', () => {
+    const msg: WsMessage = { type: 'sync:buffer-start', payload: { participantId: 'p1', displayName: 'Alice', positionMs: 0 }, timestamp: 1234 };
+    expect(isSyncMessage(msg)).toBe(true);
+  });
+
+  it('isSyncMessage returns true for sync:buffer-end', () => {
+    const msg: WsMessage = { type: 'sync:buffer-end', payload: { participantId: 'p1', positionMs: 0 }, timestamp: 1234 };
+    expect(isSyncMessage(msg)).toBe(true);
+  });
+
+  it('isValidSyncMessageType recognizes buffer types', () => {
+    expect(isValidSyncMessageType('sync:buffer-start')).toBe(true);
+    expect(isValidSyncMessageType('sync:buffer-end')).toBe(true);
+  });
+
+  it('isClientSyncMessageType recognizes buffer types as client messages', () => {
+    expect(isClientSyncMessageType('sync:buffer-start')).toBe(true);
+    expect(isClientSyncMessageType('sync:buffer-end')).toBe(true);
+  });
+});
+
 describe('createWsMessage with sync payloads', () => {
   it('creates a sync:play message', () => {
     const msg = createWsMessage('sync:play', { positionMs: 5000, serverTimestamp: Date.now() });
     expect(msg.type).toBe('sync:play');
     expect(msg.payload.positionMs).toBe(5000);
     expect(typeof msg.timestamp).toBe('number');
+  });
+
+  it('creates a sync:buffer-start message', () => {
+    const msg = createWsMessage('sync:buffer-start', { participantId: 'p1', displayName: 'Alice', positionMs: 5000 });
+    expect(msg.type).toBe('sync:buffer-start');
+    expect(msg.payload.participantId).toBe('p1');
+    expect(msg.payload.displayName).toBe('Alice');
+    expect(msg.payload.positionMs).toBe(5000);
+  });
+
+  it('creates a sync:buffer-end message', () => {
+    const msg = createWsMessage('sync:buffer-end', { participantId: 'p1', positionMs: 5500 });
+    expect(msg.type).toBe('sync:buffer-end');
+    expect(msg.payload.participantId).toBe('p1');
+    expect(msg.payload.positionMs).toBe(5500);
+  });
+
+  it('creates a sync:pause message with bufferPausedBy', () => {
+    const msg = createWsMessage('sync:pause', { positionMs: 5000, serverTimestamp: Date.now(), bufferPausedBy: 'Alice' });
+    expect(msg.type).toBe('sync:pause');
+    expect(msg.payload.bufferPausedBy).toBe('Alice');
   });
 });

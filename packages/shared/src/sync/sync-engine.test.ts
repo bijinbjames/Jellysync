@@ -347,6 +347,216 @@ describe('SyncEngine', () => {
     });
   });
 
+  describe('reportBufferStart', () => {
+    it('sends sync:buffer-start message with participant info', () => {
+      engine.destroy();
+      engine = new SyncEngine({
+        playerInterface: player,
+        sendMessage: (msg) => sentMessages.push(msg),
+        getIsHost: () => isHost,
+        getParticipantInfo: () => ({ participantId: 'p1', displayName: 'Alice' }),
+      });
+
+      (player.getPosition as ReturnType<typeof vi.fn>).mockReturnValue(5000);
+      engine.reportBufferStart();
+
+      expect(sentMessages).toHaveLength(1);
+      expect(sentMessages[0].type).toBe(SYNC_MESSAGE_TYPE.BUFFER_START);
+      const payload = sentMessages[0].payload as { participantId: string; displayName: string; positionMs: number };
+      expect(payload.participantId).toBe('p1');
+      expect(payload.displayName).toBe('Alice');
+      expect(payload.positionMs).toBe(5000);
+    });
+
+    it('guards against duplicate buffer-start (debounce)', () => {
+      engine.destroy();
+      engine = new SyncEngine({
+        playerInterface: player,
+        sendMessage: (msg) => sentMessages.push(msg),
+        getIsHost: () => isHost,
+        getParticipantInfo: () => ({ participantId: 'p1', displayName: 'Alice' }),
+      });
+
+      engine.reportBufferStart();
+      engine.reportBufferStart();
+
+      expect(sentMessages).toHaveLength(1);
+    });
+
+    it('does nothing when getParticipantInfo is not provided', () => {
+      engine.reportBufferStart();
+      expect(sentMessages).toHaveLength(0);
+    });
+
+    it('does not orphan isLocalBuffering flag when getParticipantInfo is absent', () => {
+      // After a no-op reportBufferStart, reportBufferEnd should also no-op
+      engine.reportBufferStart();
+      engine.reportBufferEnd();
+      expect(sentMessages).toHaveLength(0);
+      // And a subsequent reportBufferStart should still no-op (no getParticipantInfo)
+      engine.reportBufferStart();
+      expect(sentMessages).toHaveLength(0);
+    });
+  });
+
+  describe('reportBufferEnd', () => {
+    it('sends sync:buffer-end after buffer-start', () => {
+      engine.destroy();
+      engine = new SyncEngine({
+        playerInterface: player,
+        sendMessage: (msg) => sentMessages.push(msg),
+        getIsHost: () => isHost,
+        getParticipantInfo: () => ({ participantId: 'p1', displayName: 'Alice' }),
+      });
+
+      engine.reportBufferStart();
+      (player.getPosition as ReturnType<typeof vi.fn>).mockReturnValue(5500);
+      engine.reportBufferEnd();
+
+      expect(sentMessages).toHaveLength(2);
+      expect(sentMessages[1].type).toBe(SYNC_MESSAGE_TYPE.BUFFER_END);
+      const payload = sentMessages[1].payload as { participantId: string; positionMs: number };
+      expect(payload.participantId).toBe('p1');
+      expect(payload.positionMs).toBe(5500);
+    });
+
+    it('does nothing if buffer-start was not sent', () => {
+      engine.destroy();
+      engine = new SyncEngine({
+        playerInterface: player,
+        sendMessage: (msg) => sentMessages.push(msg),
+        getIsHost: () => isHost,
+        getParticipantInfo: () => ({ participantId: 'p1', displayName: 'Alice' }),
+      });
+
+      engine.reportBufferEnd();
+      expect(sentMessages).toHaveLength(0);
+    });
+
+    it('allows subsequent buffer-start after buffer-end', () => {
+      engine.destroy();
+      engine = new SyncEngine({
+        playerInterface: player,
+        sendMessage: (msg) => sentMessages.push(msg),
+        getIsHost: () => isHost,
+        getParticipantInfo: () => ({ participantId: 'p1', displayName: 'Alice' }),
+      });
+
+      engine.reportBufferStart();
+      engine.reportBufferEnd();
+      engine.reportBufferStart();
+
+      expect(sentMessages).toHaveLength(3);
+      expect(sentMessages[2].type).toBe(SYNC_MESSAGE_TYPE.BUFFER_START);
+    });
+  });
+
+  describe('handleSyncMessage with buffer context', () => {
+    let bufferPauseChanges: Array<string | null>;
+
+    beforeEach(() => {
+      bufferPauseChanges = [];
+      engine.destroy();
+      engine = new SyncEngine({
+        playerInterface: player,
+        sendMessage: (msg) => sentMessages.push(msg),
+        getIsHost: () => isHost,
+        onSyncStatusChange: (status) => syncStatusChanges.push(status),
+        onServerStateChange: (positionMs, timestamp) => serverStateChanges.push({ positionMs, timestamp }),
+        onBufferPauseChange: (pausedBy) => bufferPauseChanges.push(pausedBy),
+      });
+    });
+
+    it('calls onBufferPauseChange with displayName on buffer pause', () => {
+      isHost = false;
+      const msg = createWsMessage(SYNC_MESSAGE_TYPE.PAUSE, { positionMs: 5000, serverTimestamp: Date.now(), bufferPausedBy: 'Alice' });
+      engine.handleSyncMessage(msg);
+      expect(bufferPauseChanges).toContain('Alice');
+    });
+
+    it('calls onBufferPauseChange with null on play after buffer', () => {
+      isHost = false;
+      const pauseMsg = createWsMessage(SYNC_MESSAGE_TYPE.PAUSE, { positionMs: 5000, serverTimestamp: Date.now(), bufferPausedBy: 'Alice' });
+      engine.handleSyncMessage(pauseMsg);
+      const playMsg = createWsMessage(SYNC_MESSAGE_TYPE.PLAY, { positionMs: 5500, serverTimestamp: Date.now() });
+      engine.handleSyncMessage(playMsg);
+      expect(bufferPauseChanges).toEqual(['Alice', null]);
+    });
+
+    it('host processes buffer pause (does not skip echo for buffer)', () => {
+      isHost = true;
+      const msg = createWsMessage(SYNC_MESSAGE_TYPE.PAUSE, { positionMs: 5000, serverTimestamp: Date.now(), bufferPausedBy: 'Alice' });
+      engine.handleSyncMessage(msg);
+
+      // Host should process buffer pause — player should be paused
+      expect(player.pause).toHaveBeenCalled();
+      expect(bufferPauseChanges).toContain('Alice');
+    });
+
+    it('host still skips non-buffer pause (host echo guard)', () => {
+      isHost = true;
+      const msg = createWsMessage(SYNC_MESSAGE_TYPE.PAUSE, { positionMs: 5000, serverTimestamp: Date.now() });
+      engine.handleSyncMessage(msg);
+
+      // Host echo guard: no player action for regular pause
+      expect(player.pause).not.toHaveBeenCalled();
+    });
+
+    it('host resumes playback after buffer-end (P-1 fix)', () => {
+      isHost = true;
+      // Buffer pause arrives — host pauses
+      const pauseMsg = createWsMessage(SYNC_MESSAGE_TYPE.PAUSE, { positionMs: 5000, serverTimestamp: Date.now(), bufferPausedBy: 'Alice' });
+      engine.handleSyncMessage(pauseMsg);
+      expect(player.pause).toHaveBeenCalled();
+
+      // Buffer ends — play arrives, host must resume
+      const playMsg = createWsMessage(SYNC_MESSAGE_TYPE.PLAY, { positionMs: 5500, serverTimestamp: Date.now() });
+      engine.handleSyncMessage(playMsg);
+      expect(player.play).toHaveBeenCalled();
+      expect(bufferPauseChanges).toEqual(['Alice', null]);
+    });
+
+    it('host skips normal play echo even after buffer resolved', () => {
+      isHost = true;
+      // Buffer pause + resume cycle
+      engine.handleSyncMessage(createWsMessage(SYNC_MESSAGE_TYPE.PAUSE, { positionMs: 5000, serverTimestamp: Date.now(), bufferPausedBy: 'Alice' }));
+      engine.handleSyncMessage(createWsMessage(SYNC_MESSAGE_TYPE.PLAY, { positionMs: 5500, serverTimestamp: Date.now() }));
+
+      // Now a normal host play echo should be skipped
+      (player.play as ReturnType<typeof vi.fn>).mockClear();
+      engine.handleSyncMessage(createWsMessage(SYNC_MESSAGE_TYPE.PLAY, { positionMs: 6000, serverTimestamp: Date.now() }));
+      expect(player.play).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('onHostPauseChange callback (P-2 fix)', () => {
+    let hostPauseChanges: boolean[];
+
+    beforeEach(() => {
+      hostPauseChanges = [];
+      engine.destroy();
+      engine = new SyncEngine({
+        playerInterface: player,
+        sendMessage: (msg) => sentMessages.push(msg),
+        getIsHost: () => isHost,
+        onHostPauseChange: (isPaused) => hostPauseChanges.push(isPaused),
+        onBufferPauseChange: () => {},
+      });
+    });
+
+    it('fires onHostPauseChange on non-buffer pause for guest', () => {
+      isHost = false;
+      engine.handleSyncMessage(createWsMessage(SYNC_MESSAGE_TYPE.PAUSE, { positionMs: 5000, serverTimestamp: Date.now() }));
+      expect(hostPauseChanges).toEqual([true]);
+    });
+
+    it('does not fire onHostPauseChange on buffer pause', () => {
+      isHost = false;
+      engine.handleSyncMessage(createWsMessage(SYNC_MESSAGE_TYPE.PAUSE, { positionMs: 5000, serverTimestamp: Date.now(), bufferPausedBy: 'Alice' }));
+      expect(hostPauseChanges).toEqual([]);
+    });
+  });
+
   describe('late joiner', () => {
     it('seeks and plays when session is active', () => {
       const now = Date.now();

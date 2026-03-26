@@ -6,7 +6,7 @@ import { buildStreamUrl } from '@jellysync/shared';
 import { movieStore } from '../src/lib/movie';
 import { roomStore } from '../src/lib/room';
 import { authStore } from '../src/lib/auth';
-import { VideoPlayerView, useVideoPlayer, usePlaybackSync } from '../src/features/player';
+import { VideoPlayerView, useVideoPlayer, usePlaybackSync, SyncStatusChip } from '../src/features/player';
 
 export default function PlayerScreen() {
   const router = useRouter();
@@ -82,6 +82,9 @@ export default function PlayerScreen() {
           </Pressable>
         )}
       </View>
+      <View style={styles.bottomOverlay}>
+        <SyncStatusChip />
+      </View>
     </Animated.View>
   );
 }
@@ -122,5 +125,13 @@ const styles = StyleSheet.create({
     color: '#D0BCFF',
     fontSize: 14,
     fontWeight: '500',
+  },
+  bottomOverlay: {
+    position: 'absolute',
+    bottom: 24,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
   },
 });

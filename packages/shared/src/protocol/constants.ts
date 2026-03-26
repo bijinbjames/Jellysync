@@ -21,6 +21,8 @@ export const SYNC_MESSAGE_TYPE = {
   PAUSE: 'sync:pause',
   SEEK: 'sync:seek',
   STATE: 'sync:state',
+  BUFFER_START: 'sync:buffer-start',
+  BUFFER_END: 'sync:buffer-end',
 } as const;
 
 // Sync engine constants

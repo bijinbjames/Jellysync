@@ -11,6 +11,8 @@ import {
   type SyncPlayPayload,
   type SyncPausePayload,
   type SyncSeekPayload,
+  type SyncBufferStartPayload,
+  type SyncBufferEndPayload,
 } from '@jellysync/shared';
 
 interface SyncHandlerDeps {
@@ -58,6 +60,77 @@ export function createSyncHandler(deps: SyncHandlerDeps) {
       return false;
     }
     return true;
+  }
+
+  function getValidatedRoomAnyParticipant(socket: WebSocket): { room: Room; participantId: string } | null {
+    const participantId = getParticipantId(socket);
+    if (!participantId) {
+      sendTo(socket, createWsError(ERROR_CODE.NOT_IN_ROOM, ERROR_MESSAGE[ERROR_CODE.NOT_IN_ROOM]));
+      return null;
+    }
+
+    const room = roomManager.getRoomByParticipant(participantId);
+    if (!room) {
+      sendTo(socket, createWsError(ERROR_CODE.NOT_IN_ROOM, ERROR_MESSAGE[ERROR_CODE.NOT_IN_ROOM]));
+      return null;
+    }
+
+    return { room, participantId };
+  }
+
+  function handleBufferStart(socket: WebSocket, msg: WsMessage): void {
+    const result = getValidatedRoomAnyParticipant(socket);
+    if (!result) return;
+    if (!validateSyncPayload(socket, msg.payload)) return;
+
+    const { room, participantId } = result;
+    const payload = msg.payload as SyncBufferStartPayload;
+
+    // If someone is already causing a buffer pause, ignore subsequent buffer-starts
+    if (room.bufferingParticipantId !== null) return;
+
+    const participant = room.participants.get(participantId);
+    if (!participant) return;
+
+    room.bufferingParticipantId = participantId;
+    room.playbackState = {
+      positionMs: payload.positionMs,
+      isPlaying: false,
+      lastUpdated: Date.now(),
+    };
+
+    const serverTimestamp = Date.now();
+    broadcastToRoom(room, createWsMessage(SYNC_MESSAGE_TYPE.PAUSE, {
+      positionMs: payload.positionMs,
+      serverTimestamp,
+      bufferPausedBy: participant.displayName,
+    } satisfies SyncPausePayload));
+  }
+
+  function handleBufferEnd(socket: WebSocket, msg: WsMessage): void {
+    const result = getValidatedRoomAnyParticipant(socket);
+    if (!result) return;
+    if (!validateSyncPayload(socket, msg.payload)) return;
+
+    const { room, participantId } = result;
+    const payload = msg.payload as SyncBufferEndPayload;
+
+    // Only the participant who triggered the pause can resume
+    if (room.bufferingParticipantId !== participantId) return;
+
+    room.bufferingParticipantId = null;
+    const serverTimestamp = Date.now();
+
+    room.playbackState = {
+      positionMs: payload.positionMs,
+      isPlaying: true,
+      lastUpdated: serverTimestamp,
+    };
+
+    broadcastToRoom(room, createWsMessage(SYNC_MESSAGE_TYPE.PLAY, {
+      positionMs: payload.positionMs,
+      serverTimestamp,
+    } satisfies SyncPlayPayload));
   }
 
   function handleSyncPlay(socket: WebSocket, msg: WsMessage): void {
@@ -135,6 +208,12 @@ export function createSyncHandler(deps: SyncHandlerDeps) {
         break;
       case SYNC_MESSAGE_TYPE.SEEK:
         handleSyncSeek(socket, msg);
+        break;
+      case SYNC_MESSAGE_TYPE.BUFFER_START:
+        handleBufferStart(socket, msg);
+        break;
+      case SYNC_MESSAGE_TYPE.BUFFER_END:
+        handleBufferEnd(socket, msg);
         break;
     }
   }

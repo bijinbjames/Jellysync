@@ -1,5 +1,5 @@
 import type { PlayerInterface } from '../types/playback.js';
-import type { WsMessage, SyncPlayPayload, SyncPausePayload, SyncSeekPayload } from '../protocol/messages.js';
+import type { WsMessage, SyncPlayPayload, SyncPausePayload, SyncSeekPayload, SyncBufferStartPayload, SyncBufferEndPayload } from '../protocol/messages.js';
 import { SYNC_MESSAGE_TYPE, SYNC_CONFIG } from '../protocol/constants.js';
 import { createWsMessage } from '../protocol/messages.js';
 
@@ -7,16 +7,22 @@ export interface SyncEngineOptions {
   playerInterface: PlayerInterface;
   sendMessage: (msg: WsMessage) => void;
   getIsHost: () => boolean;
+  getParticipantInfo?: () => { participantId: string; displayName: string };
   onSyncStatusChange?: (status: 'synced' | 'syncing' | 'drifted') => void;
   onServerStateChange?: (positionMs: number, timestamp: number) => void;
+  onBufferPauseChange?: (pausedBy: string | null) => void;
+  onHostPauseChange?: (isPaused: boolean) => void;
 }
 
 export class SyncEngine {
   private player: PlayerInterface;
   private sendMessage: (msg: WsMessage) => void;
   private getIsHost: () => boolean;
+  private getParticipantInfo?: () => { participantId: string; displayName: string };
   private onSyncStatusChange?: (status: 'synced' | 'syncing' | 'drifted') => void;
   private onServerStateChange?: (positionMs: number, timestamp: number) => void;
+  private onBufferPauseChange?: (pausedBy: string | null) => void;
+  private onHostPauseChange?: (isPaused: boolean) => void;
 
   private lastServerPositionMs = 0;
   private lastServerTimestamp = 0;
@@ -25,13 +31,18 @@ export class SyncEngine {
   private lastSeekTime = 0;
   private correctionTimestamps: number[] = [];
   private destroyed = false;
+  private isLocalBuffering = false;
+  private bufferPauseActive = false;
 
   constructor(options: SyncEngineOptions) {
     this.player = options.playerInterface;
     this.sendMessage = options.sendMessage;
     this.getIsHost = options.getIsHost;
+    this.getParticipantInfo = options.getParticipantInfo;
     this.onSyncStatusChange = options.onSyncStatusChange;
     this.onServerStateChange = options.onServerStateChange;
+    this.onBufferPauseChange = options.onBufferPauseChange;
+    this.onHostPauseChange = options.onHostPauseChange;
   }
 
   requestPlay(): void {
@@ -54,6 +65,33 @@ export class SyncEngine {
     } satisfies SyncPausePayload));
   }
 
+  reportBufferStart(): void {
+    if (this.isLocalBuffering) return;
+
+    const info = this.getParticipantInfo?.();
+    if (!info) return;
+
+    this.isLocalBuffering = true;
+    this.sendMessage(createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_START, {
+      participantId: info.participantId,
+      displayName: info.displayName,
+      positionMs: this.player.getPosition(),
+    } satisfies SyncBufferStartPayload));
+  }
+
+  reportBufferEnd(): void {
+    if (!this.isLocalBuffering) return;
+
+    const info = this.getParticipantInfo?.();
+    if (!info) return;
+
+    this.isLocalBuffering = false;
+    this.sendMessage(createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_END, {
+      participantId: info.participantId,
+      positionMs: this.player.getPosition(),
+    } satisfies SyncBufferEndPayload));
+  }
+
   requestSeek(positionMs: number): void {
     if (!this.getIsHost()) return;
     this.player.seek(positionMs);
@@ -66,15 +104,45 @@ export class SyncEngine {
 
   handleSyncMessage(msg: WsMessage): void {
     if (this.destroyed) return;
+
+    const payload = msg.payload as Record<string, unknown>;
+    const isBufferPause = msg.type === SYNC_MESSAGE_TYPE.PAUSE && typeof payload.bufferPausedBy === 'string';
+
     // Host already applied optimistic local action — skip server echo
-    if (this.getIsHost()) return;
+    // EXCEPT for buffer-related pause/play which all participants must process
+    if (this.getIsHost()) {
+      if (isBufferPause) {
+        // Buffer pause is guest-initiated — host must process it
+        this.handlePause(msg.payload as SyncPausePayload);
+        this.onBufferPauseChange?.(payload.bufferPausedBy as string);
+        this.bufferPauseActive = true;
+        return;
+      }
+      if (msg.type === SYNC_MESSAGE_TYPE.PLAY && this.bufferPauseActive) {
+        // Play after buffer recovery — host was paused by server, must resume
+        this.handlePlay(msg.payload as SyncPlayPayload);
+        this.onBufferPauseChange?.(null);
+        this.bufferPauseActive = false;
+        return;
+      }
+      // Normal host echo — skip
+      return;
+    }
 
     switch (msg.type) {
       case SYNC_MESSAGE_TYPE.PLAY:
         this.handlePlay(msg.payload as SyncPlayPayload);
+        this.onBufferPauseChange?.(null);
+        this.bufferPauseActive = false;
         break;
       case SYNC_MESSAGE_TYPE.PAUSE:
         this.handlePause(msg.payload as SyncPausePayload);
+        if (isBufferPause) {
+          this.onBufferPauseChange?.(payload.bufferPausedBy as string);
+          this.bufferPauseActive = true;
+        } else {
+          this.onHostPauseChange?.(true);
+        }
         break;
       case SYNC_MESSAGE_TYPE.SEEK:
         this.handleSeek(msg.payload as SyncSeekPayload);

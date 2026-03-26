@@ -14,5 +14,6 @@ export interface Room {
   participants: Map<string, Participant>;
   movie: RoomMoviePayload | null;
   playbackState: PlaybackState | null;
+  bufferingParticipantId: string | null;
   createdAt: number;
 }

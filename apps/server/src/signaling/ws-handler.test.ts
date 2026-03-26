@@ -3,7 +3,7 @@ import Fastify from 'fastify';
 import websocket from '@fastify/websocket';
 import { RoomManager } from '../rooms/index.js';
 import { registerWebSocketHandler } from './ws-handler.js';
-import { ROOM_MESSAGE_TYPE, ERROR_CODE } from '@jellysync/shared';
+import { ROOM_MESSAGE_TYPE, SYNC_MESSAGE_TYPE, ERROR_CODE } from '@jellysync/shared';
 
 async function createTestServer(roomManager: RoomManager) {
   const server = Fastify({ logger: false });
@@ -341,6 +341,82 @@ describe('ws-handler', () => {
       const room = roomManager.getRoom(roomCode);
       expect(room).not.toBeNull();
       expect(room!.participants.size).toBe(1);
+
+      hostWs.close();
+    });
+  });
+
+  describe('buffer pause cleared on participant leave', () => {
+    it('broadcasts sync:play when buffering participant leaves', async () => {
+      const hostWs = await connectWs(address);
+      const createResponse = waitForMessage(hostWs);
+      sendMessage(hostWs, ROOM_MESSAGE_TYPE.CREATE, { displayName: 'Alice' });
+      const createResult = await createResponse;
+      const roomCode = (createResult.payload as Record<string, unknown>).roomCode as string;
+
+      const joinWs = await connectWs(address);
+      const joinResponse = waitForMessage(joinWs);
+      const hostJoinBroadcast = waitForMessage(hostWs);
+      sendMessage(joinWs, ROOM_MESSAGE_TYPE.JOIN, { roomCode, displayName: 'Bob' });
+      await joinResponse;
+      await hostJoinBroadcast;
+
+      // Bob starts buffering
+      sendMessage(joinWs, SYNC_MESSAGE_TYPE.BUFFER_START, { participantId: 'ignored', displayName: 'Bob', positionMs: 5000 });
+      // Wait for buffer pause broadcast
+      const pauseBroadcast = await waitForMessage(hostWs);
+      expect(pauseBroadcast.type).toBe(SYNC_MESSAGE_TYPE.PAUSE);
+
+      // Verify room has a buffering participant
+      const room = roomManager.getRoom(roomCode);
+      expect(room!.bufferingParticipantId).not.toBeNull();
+
+      // Bob leaves — should trigger resume broadcast
+      const resumeBroadcast = waitForMessage(hostWs);
+      sendMessage(joinWs, ROOM_MESSAGE_TYPE.LEAVE, {});
+
+      const resumeResult = await resumeBroadcast;
+      expect(resumeResult.type).toBe(SYNC_MESSAGE_TYPE.PLAY);
+
+      // Buffer pause should be cleared
+      expect(room!.bufferingParticipantId).toBeNull();
+
+      hostWs.close();
+    });
+
+    it('broadcasts sync:play when buffering participant disconnects after grace period', async () => {
+      const hostWs = await connectWs(address);
+      const createResponse = waitForMessage(hostWs);
+      sendMessage(hostWs, ROOM_MESSAGE_TYPE.CREATE, { displayName: 'Alice' });
+      const createResult = await createResponse;
+      const roomCode = (createResult.payload as Record<string, unknown>).roomCode as string;
+
+      const joinWs = await connectWs(address);
+      const joinResponse = waitForMessage(joinWs);
+      const hostJoinBroadcast = waitForMessage(hostWs);
+      sendMessage(joinWs, ROOM_MESSAGE_TYPE.JOIN, { roomCode, displayName: 'Bob' });
+      await joinResponse;
+      await hostJoinBroadcast;
+
+      // Bob starts buffering
+      sendMessage(joinWs, SYNC_MESSAGE_TYPE.BUFFER_START, { participantId: 'ignored', displayName: 'Bob', positionMs: 5000 });
+      const pauseBroadcast = await waitForMessage(hostWs);
+      expect(pauseBroadcast.type).toBe(SYNC_MESSAGE_TYPE.PAUSE);
+
+      // Bob disconnects (close socket)
+      const playBroadcast = waitForMessage(hostWs);
+      joinWs.close();
+      await new Promise((r) => setTimeout(r, 50));
+
+      // Advance past grace period
+      vi.advanceTimersByTime(31000);
+
+      // Host should receive sync:play (buffer cleared) then room:state (participant removed)
+      const result = await playBroadcast;
+      expect(result.type).toBe(SYNC_MESSAGE_TYPE.PLAY);
+
+      const room = roomManager.getRoom(roomCode);
+      expect(room!.bufferingParticipantId).toBeNull();
 
       hostWs.close();
     });

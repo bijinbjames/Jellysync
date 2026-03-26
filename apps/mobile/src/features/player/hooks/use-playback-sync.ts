@@ -14,13 +14,23 @@ import { useWebSocket } from '../../../shared/hooks/use-websocket.js';
 export function usePlaybackSync(playerInterface: PlayerInterface) {
   const { send, subscribe } = useWebSocket();
   const isHost = useStore(roomStore, (s) => s.isHost);
+  const isBuffering = useStore(syncStore, (s) => s.isBuffering);
   const syncEngineRef = useRef<SyncEngine | null>(null);
   const initialPlaybackAppliedRef = useRef(false);
+  const prevBufferingRef = useRef(false);
   const sendRef = useRef(send);
   sendRef.current = send;
 
   const getIsHost = useCallback(() => roomStore.getState().isHost, []);
   const stableSend = useCallback((msg: WsMessage) => sendRef.current(msg), []);
+  const getParticipantInfo = useCallback(() => {
+    const state = roomStore.getState();
+    const participant = state.participants.find((p) => p.id === state.participantId);
+    return {
+      participantId: state.participantId ?? '',
+      displayName: participant?.displayName ?? '',
+    };
+  }, []);
 
   // Create sync engine on mount
   useEffect(() => {
@@ -28,11 +38,26 @@ export function usePlaybackSync(playerInterface: PlayerInterface) {
       playerInterface,
       sendMessage: stableSend,
       getIsHost,
+      getParticipantInfo,
       onSyncStatusChange: (status) => {
         syncStore.getState().setSyncStatus(status);
       },
       onServerStateChange: (positionMs, timestamp) => {
         syncStore.getState().setServerState(positionMs, timestamp);
+      },
+      onBufferPauseChange: (pausedBy) => {
+        if (pausedBy) {
+          syncStore.getState().setBufferPause(pausedBy);
+        } else {
+          syncStore.getState().clearBufferPause();
+        }
+      },
+      onHostPauseChange: (isPaused) => {
+        if (isPaused) {
+          syncStore.getState().setHostPause();
+        } else {
+          syncStore.getState().clearBufferPause();
+        }
       },
     });
 
@@ -44,7 +69,17 @@ export function usePlaybackSync(playerInterface: PlayerInterface) {
       syncEngineRef.current = null;
       initialPlaybackAppliedRef.current = false;
     };
-  }, [playerInterface, stableSend, getIsHost]);
+  }, [playerInterface, stableSend, getIsHost, getParticipantInfo]);
+
+  // Monitor buffer state transitions and report to sync engine
+  useEffect(() => {
+    if (isBuffering && !prevBufferingRef.current) {
+      syncEngineRef.current?.reportBufferStart();
+    } else if (!isBuffering && prevBufferingRef.current) {
+      syncEngineRef.current?.reportBufferEnd();
+    }
+    prevBufferingRef.current = isBuffering;
+  }, [isBuffering]);
 
   // Subscribe to sync messages
   useEffect(() => {

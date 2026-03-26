@@ -44,6 +44,14 @@ describe('syncStore', () => {
     it('has zero last server position', () => {
       expect(store.getState().lastServerPosition).toBe(0);
     });
+
+    it('has null bufferPausedBy', () => {
+      expect(store.getState().bufferPausedBy).toBeNull();
+    });
+
+    it('has null pauseSource', () => {
+      expect(store.getState().pauseSource).toBeNull();
+    });
   });
 
   describe('setPlaybackState', () => {
@@ -138,12 +146,79 @@ describe('syncStore', () => {
     });
   });
 
+  describe('setBufferPause', () => {
+    it('sets bufferPausedBy and pauseSource to buffer', () => {
+      store.getState().setBufferPause('Alice');
+      expect(store.getState().bufferPausedBy).toBe('Alice');
+      expect(store.getState().pauseSource).toBe('buffer');
+    });
+  });
+
+  describe('clearBufferPause', () => {
+    it('clears bufferPausedBy and pauseSource', () => {
+      store.getState().setBufferPause('Alice');
+      store.getState().clearBufferPause();
+      expect(store.getState().bufferPausedBy).toBeNull();
+      expect(store.getState().pauseSource).toBeNull();
+    });
+  });
+
+  describe('setHostPause', () => {
+    it('sets pauseSource to host and clears bufferPausedBy', () => {
+      store.getState().setBufferPause('Alice');
+      store.getState().setHostPause();
+      expect(store.getState().pauseSource).toBe('host');
+      expect(store.getState().bufferPausedBy).toBeNull();
+    });
+  });
+
+  describe('SyncStatusChip state derivation', () => {
+    it('synchronized state: no pause source, synced status', () => {
+      // Default state — no pauseSource, syncStatus = synced
+      const state = store.getState();
+      expect(state.pauseSource).toBeNull();
+      expect(state.bufferPausedBy).toBeNull();
+      expect(state.syncStatus).toBe('synced');
+    });
+
+    it('buffering state: buffer pause with display name', () => {
+      store.getState().setBufferPause('Alice');
+      const state = store.getState();
+      expect(state.pauseSource).toBe('buffer');
+      expect(state.bufferPausedBy).toBe('Alice');
+    });
+
+    it('paused state: host pause source', () => {
+      store.getState().setHostPause();
+      const state = store.getState();
+      expect(state.pauseSource).toBe('host');
+      expect(state.bufferPausedBy).toBeNull();
+    });
+
+    it('transitions from buffer to synchronized on clearBufferPause', () => {
+      store.getState().setBufferPause('Alice');
+      store.getState().clearBufferPause();
+      const state = store.getState();
+      expect(state.pauseSource).toBeNull();
+      expect(state.bufferPausedBy).toBeNull();
+    });
+
+    it('transitions from buffer to host pause', () => {
+      store.getState().setBufferPause('Alice');
+      store.getState().setHostPause();
+      const state = store.getState();
+      expect(state.pauseSource).toBe('host');
+      expect(state.bufferPausedBy).toBeNull();
+    });
+  });
+
   describe('reset', () => {
     it('resets all state to initial values', () => {
       store.getState().setPlaybackState({ isPlaying: true, duration: 120000, playbackPosition: 50000, playbackRate: 1.5 });
       store.getState().setBufferState({ isBuffering: true, bufferProgress: 0.7 });
       store.getState().setSyncStatus('drifted');
       store.getState().setServerState(5000, 1234567890);
+      store.getState().setBufferPause('Alice');
       store.getState().reset();
 
       const state = store.getState();
@@ -156,6 +231,8 @@ describe('syncStore', () => {
       expect(state.syncStatus).toBe('synced');
       expect(state.lastServerTimestamp).toBe(0);
       expect(state.lastServerPosition).toBe(0);
+      expect(state.bufferPausedBy).toBeNull();
+      expect(state.pauseSource).toBeNull();
     });
   });
 });

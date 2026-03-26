@@ -242,4 +242,174 @@ describe('sync-handler', () => {
       expect(room.playbackState).toBeNull();
     });
   });
+
+  describe('sync:buffer-start', () => {
+    it('broadcasts sync:pause with bufferPausedBy when participant buffers', () => {
+      const handler = setupHandler();
+      const room = roomManager.createRoom('host-1', 'Host');
+      roomManager.joinRoom(room.code, 'guest-1', 'Alice');
+      const guestSocket = createMockSocket();
+      connectionMap.set(guestSocket, 'guest-1');
+
+      const msg = createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_START, { participantId: 'guest-1', displayName: 'Alice', positionMs: 5000 });
+      handler.handleSyncMessage(guestSocket, msg);
+
+      expect(broadcasts).toHaveLength(1);
+      expect(broadcasts[0].type).toBe(SYNC_MESSAGE_TYPE.PAUSE);
+      const payload = broadcasts[0].payload as { positionMs: number; bufferPausedBy: string };
+      expect(payload.positionMs).toBe(5000);
+      expect(payload.bufferPausedBy).toBe('Alice');
+    });
+
+    it('sets room.bufferingParticipantId', () => {
+      const handler = setupHandler();
+      const room = roomManager.createRoom('host-1', 'Host');
+      roomManager.joinRoom(room.code, 'guest-1', 'Alice');
+      const guestSocket = createMockSocket();
+      connectionMap.set(guestSocket, 'guest-1');
+
+      const msg = createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_START, { participantId: 'guest-1', displayName: 'Alice', positionMs: 5000 });
+      handler.handleSyncMessage(guestSocket, msg);
+
+      expect(room.bufferingParticipantId).toBe('guest-1');
+    });
+
+    it('updates room playbackState to paused', () => {
+      const handler = setupHandler();
+      const room = roomManager.createRoom('host-1', 'Host');
+      roomManager.joinRoom(room.code, 'guest-1', 'Alice');
+      const guestSocket = createMockSocket();
+      connectionMap.set(guestSocket, 'guest-1');
+
+      const msg = createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_START, { participantId: 'guest-1', displayName: 'Alice', positionMs: 5000 });
+      handler.handleSyncMessage(guestSocket, msg);
+
+      expect(room.playbackState!.isPlaying).toBe(false);
+      expect(room.playbackState!.positionMs).toBe(5000);
+    });
+
+    it('does NOT require host — any participant can trigger', () => {
+      const handler = setupHandler();
+      const room = roomManager.createRoom('host-1', 'Host');
+      roomManager.joinRoom(room.code, 'guest-1', 'Alice');
+      const guestSocket = createMockSocket();
+      connectionMap.set(guestSocket, 'guest-1');
+
+      const msg = createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_START, { participantId: 'guest-1', displayName: 'Alice', positionMs: 5000 });
+      handler.handleSyncMessage(guestSocket, msg);
+
+      expect(sentErrors).toHaveLength(0);
+      expect(broadcasts).toHaveLength(1);
+    });
+
+    it('ignores subsequent buffer-start when someone is already buffering', () => {
+      const handler = setupHandler();
+      const room = roomManager.createRoom('host-1', 'Host');
+      roomManager.joinRoom(room.code, 'guest-1', 'Alice');
+      roomManager.joinRoom(room.code, 'guest-2', 'Bob');
+      const guestSocket1 = createMockSocket();
+      const guestSocket2 = createMockSocket();
+      connectionMap.set(guestSocket1, 'guest-1');
+      connectionMap.set(guestSocket2, 'guest-2');
+
+      handler.handleSyncMessage(guestSocket1, createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_START, { participantId: 'guest-1', displayName: 'Alice', positionMs: 5000 }));
+      handler.handleSyncMessage(guestSocket2, createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_START, { participantId: 'guest-2', displayName: 'Bob', positionMs: 6000 }));
+
+      expect(broadcasts).toHaveLength(1);
+      expect(room.bufferingParticipantId).toBe('guest-1');
+    });
+
+    it('rejects buffer-start from unknown connection', () => {
+      const handler = setupHandler();
+      const msg = createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_START, { participantId: 'unknown', displayName: 'Unknown', positionMs: 0 });
+      handler.handleSyncMessage(socket, msg);
+      expect(sentErrors).toHaveLength(1);
+      expect(sentErrors[0].code).toBe(ERROR_CODE.NOT_IN_ROOM);
+    });
+
+    it('rejects buffer-start with invalid positionMs', () => {
+      const handler = setupHandler();
+      const room = roomManager.createRoom('host-1', 'Host');
+      roomManager.joinRoom(room.code, 'guest-1', 'Alice');
+      const guestSocket = createMockSocket();
+      connectionMap.set(guestSocket, 'guest-1');
+
+      const msg = createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_START, { participantId: 'guest-1', displayName: 'Alice', positionMs: -1 });
+      handler.handleSyncMessage(guestSocket, msg);
+      expect(broadcasts).toHaveLength(0);
+    });
+  });
+
+  describe('sync:buffer-end', () => {
+    it('broadcasts sync:play when buffering participant recovers', () => {
+      const handler = setupHandler();
+      const room = roomManager.createRoom('host-1', 'Host');
+      roomManager.joinRoom(room.code, 'guest-1', 'Alice');
+      const guestSocket = createMockSocket();
+      connectionMap.set(guestSocket, 'guest-1');
+
+      handler.handleSyncMessage(guestSocket, createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_START, { participantId: 'guest-1', displayName: 'Alice', positionMs: 5000 }));
+      handler.handleSyncMessage(guestSocket, createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_END, { participantId: 'guest-1', positionMs: 5500 }));
+
+      expect(broadcasts).toHaveLength(2);
+      expect(broadcasts[1].type).toBe(SYNC_MESSAGE_TYPE.PLAY);
+      expect((broadcasts[1].payload as { positionMs: number }).positionMs).toBe(5500);
+    });
+
+    it('clears room.bufferingParticipantId on buffer-end', () => {
+      const handler = setupHandler();
+      const room = roomManager.createRoom('host-1', 'Host');
+      roomManager.joinRoom(room.code, 'guest-1', 'Alice');
+      const guestSocket = createMockSocket();
+      connectionMap.set(guestSocket, 'guest-1');
+
+      handler.handleSyncMessage(guestSocket, createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_START, { participantId: 'guest-1', displayName: 'Alice', positionMs: 5000 }));
+      handler.handleSyncMessage(guestSocket, createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_END, { participantId: 'guest-1', positionMs: 5500 }));
+
+      expect(room.bufferingParticipantId).toBeNull();
+    });
+
+    it('updates room playbackState to playing on buffer-end', () => {
+      const handler = setupHandler();
+      const room = roomManager.createRoom('host-1', 'Host');
+      roomManager.joinRoom(room.code, 'guest-1', 'Alice');
+      const guestSocket = createMockSocket();
+      connectionMap.set(guestSocket, 'guest-1');
+
+      handler.handleSyncMessage(guestSocket, createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_START, { participantId: 'guest-1', displayName: 'Alice', positionMs: 5000 }));
+      handler.handleSyncMessage(guestSocket, createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_END, { participantId: 'guest-1', positionMs: 5500 }));
+
+      expect(room.playbackState!.isPlaying).toBe(true);
+    });
+
+    it('ignores buffer-end from participant who did not trigger the pause', () => {
+      const handler = setupHandler();
+      const room = roomManager.createRoom('host-1', 'Host');
+      roomManager.joinRoom(room.code, 'guest-1', 'Alice');
+      roomManager.joinRoom(room.code, 'guest-2', 'Bob');
+      const guestSocket1 = createMockSocket();
+      const guestSocket2 = createMockSocket();
+      connectionMap.set(guestSocket1, 'guest-1');
+      connectionMap.set(guestSocket2, 'guest-2');
+
+      handler.handleSyncMessage(guestSocket1, createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_START, { participantId: 'guest-1', displayName: 'Alice', positionMs: 5000 }));
+      handler.handleSyncMessage(guestSocket2, createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_END, { participantId: 'guest-2', positionMs: 5500 }));
+
+      // Only the buffer-start broadcast should exist; buffer-end from wrong participant is ignored
+      expect(broadcasts).toHaveLength(1);
+      expect(room.bufferingParticipantId).toBe('guest-1');
+    });
+
+    it('ignores buffer-end when no one is buffering', () => {
+      const handler = setupHandler();
+      const room = roomManager.createRoom('host-1', 'Host');
+      roomManager.joinRoom(room.code, 'guest-1', 'Alice');
+      const guestSocket = createMockSocket();
+      connectionMap.set(guestSocket, 'guest-1');
+
+      handler.handleSyncMessage(guestSocket, createWsMessage(SYNC_MESSAGE_TYPE.BUFFER_END, { participantId: 'guest-1', positionMs: 5500 }));
+
+      expect(broadcasts).toHaveLength(0);
+    });
+  });
 });

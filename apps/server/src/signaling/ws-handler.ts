@@ -12,9 +12,11 @@ import {
   ERROR_CODE,
   ERROR_MESSAGE,
   ROOM_MESSAGE_TYPE,
+  SYNC_MESSAGE_TYPE,
   WS_RECONNECT,
   type WsMessage,
   type RoomStatePayload,
+  type SyncPlayPayload,
   type Participant as SharedParticipant,
   type RoomMovieSelectPayload,
 } from '@jellysync/shared';
@@ -208,6 +210,23 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
     sendTo(socket, createWsMessage(ROOM_MESSAGE_TYPE.STATE, roomToStatePayload(room, payload.participantId)));
   }
 
+  function clearBufferPauseIfNeeded(participantId: string, room: Room): void {
+    if (room.bufferingParticipantId === participantId) {
+      room.bufferingParticipantId = null;
+      if (!room.playbackState) return;
+      const serverTimestamp = Date.now();
+      room.playbackState = {
+        positionMs: room.playbackState.positionMs,
+        isPlaying: true,
+        lastUpdated: serverTimestamp,
+      };
+      broadcastToRoom(room, createWsMessage(SYNC_MESSAGE_TYPE.PLAY, {
+        positionMs: room.playbackState.positionMs,
+        serverTimestamp,
+      } satisfies SyncPlayPayload));
+    }
+  }
+
   function handleRoomLeave(
     socket: WebSocket,
     log: FastifyInstance['log'],
@@ -216,6 +235,12 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
     if (!participantId) {
       sendTo(socket, createWsError(ERROR_CODE.NOT_IN_ROOM, ERROR_MESSAGE[ERROR_CODE.NOT_IN_ROOM], ROOM_MESSAGE_TYPE.LEAVE));
       return;
+    }
+
+    // Check if leaving participant was causing buffer pause before removing
+    const roomBeforeLeave = roomManager.getRoomByParticipant(participantId);
+    if (roomBeforeLeave) {
+      clearBufferPauseIfNeeded(participantId, roomBeforeLeave);
     }
 
     cancelGraceTimer(participantId);
@@ -261,6 +286,7 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
     const movie = payload?.movie ?? null;
     room.movie = movie;
     room.playbackState = null;
+    room.bufferingParticipantId = null;
 
     log.info({ roomCode: room.code, movieId: movie?.id ?? null }, 'Movie selected');
 
@@ -293,6 +319,11 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
 
       const timer = setTimeout(() => {
         disconnectTimers.delete(participantId);
+        // Clear buffer pause if the disconnecting participant was buffering
+        const roomBeforeRemove = roomManager.getRoomByParticipant(participantId);
+        if (roomBeforeRemove) {
+          clearBufferPauseIfNeeded(participantId, roomBeforeRemove);
+        }
         const room = roomManager.removeParticipant(participantId);
         log.info({ participantId }, 'Grace period expired, participant removed');
 

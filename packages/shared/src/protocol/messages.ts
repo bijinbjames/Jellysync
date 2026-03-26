@@ -79,11 +79,23 @@ export interface SyncPlayPayload {
 export interface SyncPausePayload {
   positionMs: number;
   serverTimestamp: number;
+  bufferPausedBy?: string;
 }
 
 export interface SyncSeekPayload {
   positionMs: number;
   serverTimestamp: number;
+}
+
+export interface SyncBufferStartPayload {
+  participantId: string;
+  displayName: string;
+  positionMs: number;
+}
+
+export interface SyncBufferEndPayload {
+  participantId: string;
+  positionMs: number;
 }
 
 export interface SyncStatePayload {
@@ -157,11 +169,21 @@ export interface SyncStateMessage extends WsMessage<SyncStatePayload> {
   type: 'sync:state';
 }
 
+export interface SyncBufferStartMessage extends WsMessage<SyncBufferStartPayload> {
+  type: 'sync:buffer-start';
+}
+
+export interface SyncBufferEndMessage extends WsMessage<SyncBufferEndPayload> {
+  type: 'sync:buffer-end';
+}
+
 export type SyncMessage =
   | SyncPlayMessage
   | SyncPauseMessage
   | SyncSeekMessage
-  | SyncStateMessage;
+  | SyncStateMessage
+  | SyncBufferStartMessage
+  | SyncBufferEndMessage;
 
 // --- Type guards ---
 
@@ -213,12 +235,16 @@ const SYNC_MESSAGE_TYPES = new Set([
   'sync:pause',
   'sync:seek',
   'sync:state',
+  'sync:buffer-start',
+  'sync:buffer-end',
 ]);
 
 const CLIENT_SYNC_MESSAGE_TYPES = new Set([
   'sync:play',
   'sync:pause',
   'sync:seek',
+  'sync:buffer-start',
+  'sync:buffer-end',
 ]);
 
 export function isSyncMessage(msg: WsMessage): msg is SyncMessage {

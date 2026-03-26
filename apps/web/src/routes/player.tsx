@@ -5,7 +5,7 @@ import { buildStreamUrl } from '@jellysync/shared';
 import { movieStore } from '../lib/movie';
 import { roomStore } from '../lib/room';
 import { authStore } from '../lib/auth';
-import { HtmlVideoPlayer, useHtmlVideo, usePlaybackSync } from '../features/player';
+import { HtmlVideoPlayer, useHtmlVideo, usePlaybackSync, SyncStatusChip } from '../features/player';
 
 export default function PlayerPage() {
   const navigate = useNavigate();
@@ -68,6 +68,9 @@ export default function PlayerPage() {
           </button>
         )}
       </div>
+      <div style={bottomOverlayStyle}>
+        <SyncStatusChip />
+      </div>
     </div>
   );
 }
@@ -110,4 +113,15 @@ const changeButtonStyle: React.CSSProperties = {
   background: 'none',
   border: 'none',
   cursor: 'pointer',
+};
+
+const bottomOverlayStyle: React.CSSProperties = {
+  position: 'absolute',
+  bottom: 24,
+  left: 0,
+  right: 0,
+  display: 'flex',
+  justifyContent: 'center',
+  zIndex: 10,
+  pointerEvents: 'none',
 };

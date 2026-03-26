@@ -2,6 +2,8 @@ import { createStore } from 'zustand/vanilla';
 
 export type SyncStatus = 'synced' | 'syncing' | 'drifted';
 
+export type PauseSource = 'host' | 'buffer' | null;
+
 export interface SyncState {
   playbackPosition: number;
   duration: number;
@@ -12,6 +14,8 @@ export interface SyncState {
   syncStatus: SyncStatus;
   lastServerTimestamp: number;
   lastServerPosition: number;
+  bufferPausedBy: string | null;
+  pauseSource: PauseSource;
 }
 
 export interface SyncActions {
@@ -20,6 +24,9 @@ export interface SyncActions {
   setPosition: (positionMs: number) => void;
   setSyncStatus: (status: SyncStatus) => void;
   setServerState: (positionMs: number, timestamp: number) => void;
+  setBufferPause: (displayName: string) => void;
+  clearBufferPause: () => void;
+  setHostPause: () => void;
   reset: () => void;
 }
 
@@ -35,6 +42,8 @@ const initialState: SyncState = {
   syncStatus: 'synced',
   lastServerTimestamp: 0,
   lastServerPosition: 0,
+  bufferPausedBy: null,
+  pauseSource: null,
 };
 
 export function createSyncStore() {
@@ -45,6 +54,9 @@ export function createSyncStore() {
     setPosition: (positionMs) => set({ playbackPosition: positionMs }),
     setSyncStatus: (status) => set({ syncStatus: status }),
     setServerState: (positionMs, timestamp) => set({ lastServerPosition: positionMs, lastServerTimestamp: timestamp }),
+    setBufferPause: (displayName) => set({ bufferPausedBy: displayName, pauseSource: 'buffer' }),
+    clearBufferPause: () => set({ bufferPausedBy: null, pauseSource: null }),
+    setHostPause: () => set({ pauseSource: 'host', bufferPausedBy: null }),
     reset: () => set(initialState),
   }));
 }

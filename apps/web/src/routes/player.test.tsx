@@ -20,6 +20,8 @@ vi.mock('../features/player', () => ({
   HtmlVideoPlayer: ({ streamUrl }: { streamUrl: string }) => (
     <div data-testid="html-video-player" data-stream-url={streamUrl} />
   ),
+  usePlaybackSync: () => ({ requestPlay: vi.fn(), requestPause: vi.fn(), requestSeek: vi.fn(), isHost: false }),
+  SyncStatusChip: () => <div data-testid="sync-status-chip" />,
 }));
 
 function renderPlayer() {
