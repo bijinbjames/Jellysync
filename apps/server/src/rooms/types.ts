@@ -16,5 +16,6 @@ export interface Room {
   playbackState: PlaybackState | null;
   bufferingParticipantId: string | null;
   permissions: ParticipantPermissions;
+  steppedAwayParticipants: Set<string>;
   createdAt: number;
 }

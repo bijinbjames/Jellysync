@@ -61,14 +61,30 @@ export interface JellyfinGenresResponse {
   Items: JellyfinGenre[];
 }
 
+export interface JellyfinMediaStream {
+  Type: string;
+  Codec: string;
+  Index?: number;
+  Language?: string;
+  DisplayTitle?: string;
+  IsDefault?: boolean;
+  IsForced?: boolean;
+}
+
 export interface JellyfinMediaSource {
   Id: string;
   Container: string;
-  MediaStreams?: Array<{
-    Type: string;
-    Codec: string;
-  }>;
+  MediaStreams?: JellyfinMediaStream[];
   TranscodingUrl?: string;
+}
+
+export interface SubtitleTrack {
+  index: number;
+  language: string;
+  displayTitle: string;
+  codec: string;
+  isDefault: boolean;
+  isForced: boolean;
 }
 
 export interface JellyfinMovieDetails {

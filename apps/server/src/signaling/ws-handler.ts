@@ -12,6 +12,7 @@ import {
   createWsMessage,
   ERROR_CODE,
   ERROR_MESSAGE,
+  PARTICIPANT_MESSAGE_TYPE,
   ROOM_MESSAGE_TYPE,
   SYNC_MESSAGE_TYPE,
   WS_RECONNECT,
@@ -23,6 +24,7 @@ import {
 } from '@jellysync/shared';
 import { createSyncHandler } from '../sync/sync-handler.js';
 import { createPermissionHandler } from '../rooms/permissions.js';
+import { createSteppedAwayHandler } from '../rooms/stepped-away.js';
 
 const MAX_DISPLAY_NAME_LENGTH = 50;
 
@@ -47,6 +49,7 @@ function roomToStatePayload(room: Room, forParticipantId?: string): RoomStatePay
         }
       : null,
     permissions: room.permissions,
+    steppedAwayParticipants: Array.from(room.steppedAwayParticipants),
     ...(forParticipantId ? { participantId: forParticipantId } : {}),
   };
 }
@@ -73,9 +76,11 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
   }
 
   function broadcastToRoom(room: Room, message: WsMessage): void;
+  function broadcastToRoom(room: Room, message: WsMessage, excludeParticipantId: string): void;
   function broadcastToRoom(room: Room, payloadBuilder: (participantId: string) => WsMessage): void;
-  function broadcastToRoom(room: Room, msgOrBuilder: WsMessage | ((participantId: string) => WsMessage)): void {
+  function broadcastToRoom(room: Room, msgOrBuilder: WsMessage | ((participantId: string) => WsMessage), excludeParticipantId?: string): void {
     for (const participant of room.participants.values()) {
+      if (excludeParticipantId && participant.id === excludeParticipantId) continue;
       const conn = participantToConnection.get(participant.id);
       if (conn) {
         const message = typeof msgOrBuilder === 'function' ? msgOrBuilder(participant.id) : msgOrBuilder;
@@ -92,6 +97,13 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
   });
 
   const permissionHandler = createPermissionHandler({
+    roomManager,
+    getParticipantId: (socket) => connectionToParticipant.get(socket),
+    sendTo,
+    broadcastToRoom,
+  });
+
+  const steppedAwayHandler = createSteppedAwayHandler({
     roomManager,
     getParticipantId: (socket) => connectionToParticipant.get(socket),
     sendTo,
@@ -237,6 +249,21 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
     }
   }
 
+  function clearSteppedAwayPauseIfNeeded(room: Room): void {
+    if (room.steppedAwayParticipants.size === 0 && room.playbackState && !room.playbackState.isPlaying) {
+      const serverTimestamp = Date.now();
+      room.playbackState = {
+        positionMs: room.playbackState.positionMs,
+        isPlaying: true,
+        lastUpdated: serverTimestamp,
+      };
+      broadcastToRoom(room, createWsMessage(SYNC_MESSAGE_TYPE.PLAY, {
+        positionMs: room.playbackState.positionMs,
+        serverTimestamp,
+      } satisfies SyncPlayPayload));
+    }
+  }
+
   function handleRoomLeave(
     socket: WebSocket,
     log: FastifyInstance['log'],
@@ -261,6 +288,7 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
     log.info({ participantId }, 'Participant left room');
 
     if (room) {
+      clearSteppedAwayPauseIfNeeded(room);
       broadcastToRoom(room, (pid) =>
         createWsMessage(ROOM_MESSAGE_TYPE.STATE, roomToStatePayload(room, pid)),
       );
@@ -338,6 +366,7 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
         log.info({ participantId }, 'Grace period expired, participant removed');
 
         if (room) {
+          clearSteppedAwayPauseIfNeeded(room);
           broadcastToRoom(room, (pid) =>
             createWsMessage(ROOM_MESSAGE_TYPE.STATE, roomToStatePayload(room, pid)),
           );
@@ -372,7 +401,13 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
       }
 
       if (isClientParticipantMessageType(data.type)) {
-        permissionHandler.handleParticipantMessage(socket, data);
+        if (data.type === PARTICIPANT_MESSAGE_TYPE.STEPPED_AWAY) {
+          steppedAwayHandler.handleSteppedAway(socket, data);
+        } else if (data.type === PARTICIPANT_MESSAGE_TYPE.RETURNED) {
+          steppedAwayHandler.handleReturned(socket, data);
+        } else {
+          permissionHandler.handleParticipantMessage(socket, data);
+        }
         return;
       }
 

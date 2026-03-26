@@ -4,6 +4,8 @@ import {
   isValidParticipantMessageType,
   isClientParticipantMessageType,
   isValidPermissionUpdatePayload,
+  isValidSteppedAwayPayload,
+  isValidReturnedPayload,
   createWsMessage,
   type WsMessage,
 } from './messages.js';
@@ -12,6 +14,14 @@ import { PARTICIPANT_MESSAGE_TYPE } from './constants.js';
 describe('PARTICIPANT_MESSAGE_TYPE', () => {
   it('has PERMISSION_UPDATE constant', () => {
     expect(PARTICIPANT_MESSAGE_TYPE.PERMISSION_UPDATE).toBe('participant:permission-update');
+  });
+
+  it('has STEPPED_AWAY constant', () => {
+    expect(PARTICIPANT_MESSAGE_TYPE.STEPPED_AWAY).toBe('participant:stepped-away');
+  });
+
+  it('has RETURNED constant', () => {
+    expect(PARTICIPANT_MESSAGE_TYPE.RETURNED).toBe('participant:returned');
   });
 });
 
@@ -37,6 +47,14 @@ describe('isValidParticipantMessageType', () => {
     expect(isValidParticipantMessageType('participant:permission-update')).toBe(true);
   });
 
+  it('returns true for participant:stepped-away', () => {
+    expect(isValidParticipantMessageType('participant:stepped-away')).toBe(true);
+  });
+
+  it('returns true for participant:returned', () => {
+    expect(isValidParticipantMessageType('participant:returned')).toBe(true);
+  });
+
   it('returns false for invalid types', () => {
     expect(isValidParticipantMessageType('participant:invalid')).toBe(false);
     expect(isValidParticipantMessageType('room:create')).toBe(false);
@@ -47,6 +65,14 @@ describe('isValidParticipantMessageType', () => {
 describe('isClientParticipantMessageType', () => {
   it('returns true for client participant message types', () => {
     expect(isClientParticipantMessageType('participant:permission-update')).toBe(true);
+  });
+
+  it('returns true for stepped-away client message', () => {
+    expect(isClientParticipantMessageType('participant:stepped-away')).toBe(true);
+  });
+
+  it('returns true for returned client message', () => {
+    expect(isClientParticipantMessageType('participant:returned')).toBe(true);
   });
 
   it('returns false for invalid types', () => {
@@ -98,6 +124,58 @@ describe('isValidPermissionUpdatePayload', () => {
   });
 });
 
+describe('isValidSteppedAwayPayload', () => {
+  it('returns true for valid payload', () => {
+    expect(isValidSteppedAwayPayload({ participantId: 'user-1', participantName: 'Alice' })).toBe(true);
+  });
+
+  it('returns false for null', () => {
+    expect(isValidSteppedAwayPayload(null)).toBe(false);
+  });
+
+  it('returns false for non-object', () => {
+    expect(isValidSteppedAwayPayload('string')).toBe(false);
+  });
+
+  it('returns false for missing participantId', () => {
+    expect(isValidSteppedAwayPayload({ participantName: 'Alice' })).toBe(false);
+  });
+
+  it('returns false for missing participantName', () => {
+    expect(isValidSteppedAwayPayload({ participantId: 'user-1' })).toBe(false);
+  });
+
+  it('returns false for non-string participantId', () => {
+    expect(isValidSteppedAwayPayload({ participantId: 123, participantName: 'Alice' })).toBe(false);
+  });
+
+  it('returns false for non-string participantName', () => {
+    expect(isValidSteppedAwayPayload({ participantId: 'user-1', participantName: 123 })).toBe(false);
+  });
+});
+
+describe('isValidReturnedPayload', () => {
+  it('returns true for valid payload', () => {
+    expect(isValidReturnedPayload({ participantId: 'user-1', participantName: 'Alice' })).toBe(true);
+  });
+
+  it('returns false for null', () => {
+    expect(isValidReturnedPayload(null)).toBe(false);
+  });
+
+  it('returns false for non-object', () => {
+    expect(isValidReturnedPayload(42)).toBe(false);
+  });
+
+  it('returns false for missing participantId', () => {
+    expect(isValidReturnedPayload({ participantName: 'Alice' })).toBe(false);
+  });
+
+  it('returns false for missing participantName', () => {
+    expect(isValidReturnedPayload({ participantId: 'user-1' })).toBe(false);
+  });
+});
+
 describe('createWsMessage for participant messages', () => {
   it('creates a permission-update message', () => {
     const msg = createWsMessage(PARTICIPANT_MESSAGE_TYPE.PERMISSION_UPDATE, {
@@ -109,6 +187,26 @@ describe('createWsMessage for participant messages', () => {
       permissions: { canPlayPause: false, canSeek: true },
       updatedBy: 'host-456',
     });
+    expect(typeof msg.timestamp).toBe('number');
+  });
+
+  it('creates a stepped-away message', () => {
+    const msg = createWsMessage(PARTICIPANT_MESSAGE_TYPE.STEPPED_AWAY, {
+      participantId: 'user-1',
+      participantName: 'Alice',
+    });
+    expect(msg.type).toBe('participant:stepped-away');
+    expect(msg.payload).toEqual({ participantId: 'user-1', participantName: 'Alice' });
+    expect(typeof msg.timestamp).toBe('number');
+  });
+
+  it('creates a returned message', () => {
+    const msg = createWsMessage(PARTICIPANT_MESSAGE_TYPE.RETURNED, {
+      participantId: 'user-1',
+      participantName: 'Alice',
+    });
+    expect(msg.type).toBe('participant:returned');
+    expect(msg.payload).toEqual({ participantId: 'user-1', participantName: 'Alice' });
     expect(typeof msg.timestamp).toBe('number');
   });
 });

@@ -13,6 +13,7 @@ export interface SyncEngineOptions {
   onServerStateChange?: (positionMs: number, timestamp: number) => void;
   onBufferPauseChange?: (pausedBy: string | null) => void;
   onHostPauseChange?: (isPaused: boolean) => void;
+  onSteppedAwayPauseChange?: (pausedBy: string | null) => void;
 }
 
 export class SyncEngine {
@@ -25,6 +26,7 @@ export class SyncEngine {
   private onServerStateChange?: (positionMs: number, timestamp: number) => void;
   private onBufferPauseChange?: (pausedBy: string | null) => void;
   private onHostPauseChange?: (isPaused: boolean) => void;
+  private onSteppedAwayPauseChange?: (pausedBy: string | null) => void;
 
   private lastServerPositionMs = 0;
   private lastServerTimestamp = 0;
@@ -46,6 +48,7 @@ export class SyncEngine {
     this.onServerStateChange = options.onServerStateChange;
     this.onBufferPauseChange = options.onBufferPauseChange;
     this.onHostPauseChange = options.onHostPauseChange;
+    this.onSteppedAwayPauseChange = options.onSteppedAwayPauseChange;
   }
 
   requestPlay(): void {
@@ -115,11 +118,19 @@ export class SyncEngine {
     if (this.destroyed) return;
 
     const payload = msg.payload as Record<string, unknown>;
-    const isBufferPause = msg.type === SYNC_MESSAGE_TYPE.PAUSE && typeof payload.bufferPausedBy === 'string';
+    const isSteppedAwayPause = msg.type === SYNC_MESSAGE_TYPE.PAUSE && payload.pauseSource === 'stepped-away';
+    const isBufferPause = msg.type === SYNC_MESSAGE_TYPE.PAUSE && !isSteppedAwayPause && typeof payload.bufferPausedBy === 'string';
+    const isServerInitiatedPause = isBufferPause || isSteppedAwayPause;
 
     // Host already applied optimistic local action — skip server echo
-    // EXCEPT for buffer-related pause/play which all participants must process
+    // EXCEPT for server-initiated pause/play which all participants must process
     if (this.getIsHost()) {
+      if (isSteppedAwayPause) {
+        this.handlePause(msg.payload as SyncPausePayload);
+        this.onSteppedAwayPauseChange?.(payload.bufferPausedBy as string);
+        this.bufferPauseActive = true;
+        return;
+      }
       if (isBufferPause) {
         // Buffer pause is guest-initiated — host must process it
         this.handlePause(msg.payload as SyncPausePayload);
@@ -128,9 +139,10 @@ export class SyncEngine {
         return;
       }
       if (msg.type === SYNC_MESSAGE_TYPE.PLAY && this.bufferPauseActive) {
-        // Play after buffer recovery — host was paused by server, must resume
+        // Play after buffer/stepped-away recovery — host was paused by server, must resume
         this.handlePlay(msg.payload as SyncPlayPayload);
         this.onBufferPauseChange?.(null);
+        this.onSteppedAwayPauseChange?.(null);
         this.bufferPauseActive = false;
         return;
       }
@@ -142,11 +154,15 @@ export class SyncEngine {
       case SYNC_MESSAGE_TYPE.PLAY:
         this.handlePlay(msg.payload as SyncPlayPayload);
         this.onBufferPauseChange?.(null);
+        this.onSteppedAwayPauseChange?.(null);
         this.bufferPauseActive = false;
         break;
       case SYNC_MESSAGE_TYPE.PAUSE:
         this.handlePause(msg.payload as SyncPausePayload);
-        if (isBufferPause) {
+        if (isSteppedAwayPause) {
+          this.onSteppedAwayPauseChange?.(payload.bufferPausedBy as string);
+          this.bufferPauseActive = true;
+        } else if (isBufferPause) {
           this.onBufferPauseChange?.(payload.bufferPausedBy as string);
           this.bufferPauseActive = true;
         } else {

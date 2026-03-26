@@ -1,3 +1,5 @@
+import type { JellyfinMediaSource, SubtitleTrack } from './types.js';
+
 export interface StreamUrlOptions {
   mediaSourceId?: string;
   maxBitrate?: number;
@@ -33,4 +35,35 @@ export function buildStreamUrl(
   });
   if (options?.container) params.set('Container', options.container);
   return `${baseUrl}/Videos/${itemId}/stream?${params}`;
+}
+
+export function extractSubtitleTracks(mediaSources: JellyfinMediaSource[]): SubtitleTrack[] {
+  const tracks: SubtitleTrack[] = [];
+  for (const source of mediaSources) {
+    if (!source.MediaStreams) continue;
+    for (const stream of source.MediaStreams) {
+      if (stream.Type === 'Subtitle') {
+        tracks.push({
+          index: stream.Index ?? 0,
+          language: stream.Language ?? 'und',
+          displayTitle: stream.DisplayTitle ?? stream.Language ?? 'Unknown',
+          codec: stream.Codec,
+          isDefault: stream.IsDefault ?? false,
+          isForced: stream.IsForced ?? false,
+        });
+      }
+    }
+  }
+  return tracks;
+}
+
+export function getSubtitleUrl(
+  serverUrl: string,
+  itemId: string,
+  mediaSourceId: string,
+  streamIndex: number,
+  format: string = 'vtt',
+): string {
+  const baseUrl = serverUrl.replace(/\/+$/, '');
+  return `${baseUrl}/Videos/${itemId}/${mediaSourceId}/Subtitles/${streamIndex}/Stream.${format}`;
 }

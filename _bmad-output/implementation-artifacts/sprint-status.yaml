@@ -40,6 +40,8 @@ last_updated: 2026-03-26
 # last_updated auto-set by create-story workflow
 # last_updated auto-set by dev-story workflow
 # last_updated auto-set by create-story workflow
+# last_updated auto-set by dev-story workflow
+# last_updated auto-set by create-story workflow
 project: myapp
 project_key: NOKEY
 tracking_system: file-system
@@ -78,7 +80,7 @@ development_status:
   4-2-sync-engine-and-playback-coordination: done
   4-3-buffer-detection-and-communal-pause: done
   4-4-player-controls-and-host-permissions: done
-  4-5-subtitles-and-stepped-away: backlog
+  4-5-subtitles-and-stepped-away: done
   epic-4-retrospective: optional
 
   # Epic 5: Voice Chat & Audio

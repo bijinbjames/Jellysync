@@ -36,6 +36,7 @@ export class RoomManager {
       playbackState: null,
       bufferingParticipantId: null,
       permissions: { canPlayPause: true, canSeek: true },
+      steppedAwayParticipants: new Set(),
       createdAt: Date.now(),
     };
 
@@ -105,7 +106,33 @@ export class RoomManager {
   removeParticipant(participantId: string): Room | null {
     const code = this.participantToRoom.get(participantId);
     if (!code) return null;
+    const room = this.rooms.get(code);
+    if (room) {
+      room.steppedAwayParticipants.delete(participantId);
+    }
     return this.leaveRoom(code, participantId);
+  }
+
+  markSteppedAway(roomCode: string, participantId: string): boolean {
+    const room = this.rooms.get(roomCode);
+    if (!room) return false;
+    if (room.steppedAwayParticipants.has(participantId)) return false;
+    room.steppedAwayParticipants.add(participantId);
+    return true;
+  }
+
+  markReturned(roomCode: string, participantId: string): boolean {
+    const room = this.rooms.get(roomCode);
+    if (!room) return false;
+    if (!room.steppedAwayParticipants.has(participantId)) return false;
+    room.steppedAwayParticipants.delete(participantId);
+    return true;
+  }
+
+  isParticipantSteppedAway(roomCode: string, participantId: string): boolean {
+    const room = this.rooms.get(roomCode);
+    if (!room) return false;
+    return room.steppedAwayParticipants.has(participantId);
   }
 
   getRoomCodes(): Set<string> {

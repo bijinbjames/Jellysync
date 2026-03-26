@@ -9,7 +9,7 @@ export {
   type FetchMovieListOptions,
   type ImageUrlOptions,
 } from './library.js';
-export { buildStreamUrl, type StreamUrlOptions } from './streaming.js';
+export { buildStreamUrl, extractSubtitleTracks, getSubtitleUrl, type StreamUrlOptions } from './streaming.js';
 export { useMovieList, useMovieDetails, useLibraryCategories } from './hooks.js';
 export { useLibrary, RECENTLY_ADDED_CATEGORY, type UseLibraryResult } from './use-library.js';
 export {
@@ -27,5 +27,7 @@ export {
   type JellyfinMovieDetails,
   type JellyfinMediaSource,
   type JellyfinStreamInfo,
+  type JellyfinMediaStream,
+  type SubtitleTrack,
   type LibraryErrorType,
 } from './types.js';

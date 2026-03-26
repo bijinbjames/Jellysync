@@ -7,15 +7,17 @@ import {
   type WsMessage,
   type RoomStatePayload,
   type PermissionUpdatePayload,
+  type SteppedAwayPayload,
+  type ReturnedPayload,
   type ParticipantPermissions,
 } from '@jellysync/shared';
 import type { PlayerInterface } from '@jellysync/shared';
 import { syncStore } from '../../../lib/sync.js';
 import { roomStore } from '../../../lib/room.js';
-import { useWebSocket } from '../../../shared/hooks/use-websocket.js';
+import { useWs } from '../../../shared/providers/websocket-provider.js';
 
 export function usePlaybackSync(playerInterface: PlayerInterface) {
-  const { send, subscribe } = useWebSocket();
+  const { send, subscribe } = useWs();
   const isHost = useStore(roomStore, (s) => s.isHost);
   const isBuffering = useStore(syncStore, (s) => s.isBuffering);
   const syncEngineRef = useRef<SyncEngine | null>(null);
@@ -60,6 +62,13 @@ export function usePlaybackSync(playerInterface: PlayerInterface) {
       onHostPauseChange: (isPaused) => {
         if (isPaused) {
           syncStore.getState().setHostPause();
+        } else {
+          syncStore.getState().clearBufferPause();
+        }
+      },
+      onSteppedAwayPauseChange: (pausedBy) => {
+        if (pausedBy) {
+          syncStore.getState().setSteppedAwayPause(pausedBy);
         } else {
           syncStore.getState().clearBufferPause();
         }
@@ -115,6 +124,9 @@ export function usePlaybackSync(playerInterface: PlayerInterface) {
         syncStore.getState().setPermissions(payload.permissions);
       }
 
+      // Reconcile stepped-away state from authoritative server list
+      syncStore.getState().setSteppedAwayParticipants(payload.steppedAwayParticipants ?? []);
+
       if (initialPlaybackAppliedRef.current) return;
       if (payload.playback) {
         initialPlaybackAppliedRef.current = true;
@@ -137,6 +149,28 @@ export function usePlaybackSync(playerInterface: PlayerInterface) {
     });
 
     return unsub;
+  }, [subscribe]);
+
+  // Subscribe to stepped-away / returned messages
+  useEffect(() => {
+    const unsubSteppedAway = subscribe(PARTICIPANT_MESSAGE_TYPE.STEPPED_AWAY, (msg: WsMessage) => {
+      const payload = msg.payload as SteppedAwayPayload;
+      syncStore.getState().addSteppedAway(payload.participantId);
+      syncStore.getState().setSteppedAwayPause(payload.participantName);
+    });
+
+    const unsubReturned = subscribe(PARTICIPANT_MESSAGE_TYPE.RETURNED, (msg: WsMessage) => {
+      const payload = msg.payload as ReturnedPayload;
+      syncStore.getState().removeSteppedAway(payload.participantId);
+      if (syncStore.getState().steppedAwayParticipantIds.length === 0) {
+        syncStore.getState().clearBufferPause();
+      }
+    });
+
+    return () => {
+      unsubSteppedAway();
+      unsubReturned();
+    };
   }, [subscribe]);
 
   const requestPlay = useCallback(() => {

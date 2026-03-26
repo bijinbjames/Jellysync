@@ -10,6 +10,7 @@ export function HtmlVideoPlayer({ videoRef, streamUrl }: HtmlVideoPlayerProps) {
     <div style={containerStyle}>
       <video
         ref={videoRef}
+        src={streamUrl}
         style={videoStyle}
         playsInline
       />

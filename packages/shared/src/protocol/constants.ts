@@ -29,6 +29,8 @@ export const SYNC_MESSAGE_TYPE = {
 // Participant message types
 export const PARTICIPANT_MESSAGE_TYPE = {
   PERMISSION_UPDATE: 'participant:permission-update',
+  STEPPED_AWAY: 'participant:stepped-away',
+  RETURNED: 'participant:returned',
 } as const;
 
 // Sync engine constants

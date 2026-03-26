@@ -6,7 +6,7 @@ import { authStore } from '../../src/lib/auth';
 import { roomStore } from '../../src/lib/room';
 import { movieStore } from '../../src/lib/movie';
 import { useWs } from '../../src/shared/providers/websocket-provider';
-import { createWsMessage, ROOM_MESSAGE_TYPE, ROOM_CONFIG, ERROR_CODE } from '@jellysync/shared';
+import { createWsMessage, ROOM_MESSAGE_TYPE, SYNC_MESSAGE_TYPE, ROOM_CONFIG, ERROR_CODE, type WsMessage, type RoomStatePayload } from '@jellysync/shared';
 import { RoomCodeDisplay } from '../../src/features/room/components/room-code-display';
 import { ParticipantChip } from '../../src/features/room/components/participant-chip';
 import { MovieBriefCard } from '../../src/features/room/components/movie-brief-card';
@@ -77,6 +77,27 @@ export default function RoomLobbyScreen() {
     });
     return unsub;
   }, [subscribe]);
+
+  // Navigate participant to player when host starts playback
+  useEffect(() => {
+    if (isHost) return;
+
+    const unsubPlay = subscribe(SYNC_MESSAGE_TYPE.PLAY, () => {
+      router.push('/player' as any);
+    });
+
+    const unsubState = subscribe('room:state', (msg: WsMessage) => {
+      const payload = msg.payload as RoomStatePayload;
+      if (payload.playback?.isPlaying) {
+        router.push('/player' as any);
+      }
+    });
+
+    return () => {
+      unsubPlay();
+      unsubState();
+    };
+  }, [isHost, subscribe, router]);
 
   // Auto-join via deep link: subscribe first, then send when WS is ready
   useEffect(() => {

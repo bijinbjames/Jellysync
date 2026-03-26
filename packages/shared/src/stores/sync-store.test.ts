@@ -253,6 +253,93 @@ describe('syncStore', () => {
     });
   });
 
+  describe('subtitle state', () => {
+    it('has subtitles disabled by default', () => {
+      expect(store.getState().subtitlesEnabled).toBe(false);
+    });
+
+    it('has null subtitleTrackIndex by default', () => {
+      expect(store.getState().subtitleTrackIndex).toBeNull();
+    });
+
+    it('has empty availableSubtitleTracks by default', () => {
+      expect(store.getState().availableSubtitleTracks).toEqual([]);
+    });
+
+    it('setSubtitlesEnabled toggles subtitles on', () => {
+      store.getState().setSubtitlesEnabled(true);
+      expect(store.getState().subtitlesEnabled).toBe(true);
+    });
+
+    it('setSubtitlesEnabled toggles subtitles off', () => {
+      store.getState().setSubtitlesEnabled(true);
+      store.getState().setSubtitlesEnabled(false);
+      expect(store.getState().subtitlesEnabled).toBe(false);
+    });
+
+    it('setSubtitleTrackIndex sets track index', () => {
+      store.getState().setSubtitleTrackIndex(2);
+      expect(store.getState().subtitleTrackIndex).toBe(2);
+    });
+
+    it('setSubtitleTrackIndex can be set to null', () => {
+      store.getState().setSubtitleTrackIndex(2);
+      store.getState().setSubtitleTrackIndex(null);
+      expect(store.getState().subtitleTrackIndex).toBeNull();
+    });
+
+    it('setAvailableSubtitleTracks sets tracks array', () => {
+      const tracks = [
+        { index: 2, language: 'eng', displayTitle: 'English', codec: 'srt', isDefault: true, isForced: false },
+        { index: 3, language: 'spa', displayTitle: 'Spanish', codec: 'ass', isDefault: false, isForced: false },
+      ];
+      store.getState().setAvailableSubtitleTracks(tracks);
+      expect(store.getState().availableSubtitleTracks).toEqual(tracks);
+    });
+  });
+
+  describe('stepped-away participant tracking', () => {
+    it('has empty steppedAwayParticipantIds by default', () => {
+      expect(store.getState().steppedAwayParticipantIds).toEqual([]);
+    });
+
+    it('addSteppedAway adds participant id', () => {
+      store.getState().addSteppedAway('user-1');
+      expect(store.getState().steppedAwayParticipantIds).toEqual(['user-1']);
+    });
+
+    it('addSteppedAway does not duplicate ids', () => {
+      store.getState().addSteppedAway('user-1');
+      store.getState().addSteppedAway('user-1');
+      expect(store.getState().steppedAwayParticipantIds).toEqual(['user-1']);
+    });
+
+    it('addSteppedAway supports multiple participants', () => {
+      store.getState().addSteppedAway('user-1');
+      store.getState().addSteppedAway('user-2');
+      expect(store.getState().steppedAwayParticipantIds).toEqual(['user-1', 'user-2']);
+    });
+
+    it('removeSteppedAway removes participant id', () => {
+      store.getState().addSteppedAway('user-1');
+      store.getState().addSteppedAway('user-2');
+      store.getState().removeSteppedAway('user-1');
+      expect(store.getState().steppedAwayParticipantIds).toEqual(['user-2']);
+    });
+
+    it('removeSteppedAway is no-op for non-existent id', () => {
+      store.getState().addSteppedAway('user-1');
+      store.getState().removeSteppedAway('user-99');
+      expect(store.getState().steppedAwayParticipantIds).toEqual(['user-1']);
+    });
+
+    it('setSteppedAwayPause sets pauseSource and bufferPausedBy', () => {
+      store.getState().setSteppedAwayPause('Alice');
+      expect(store.getState().pauseSource).toBe('stepped-away');
+      expect(store.getState().bufferPausedBy).toBe('Alice');
+    });
+  });
+
   describe('reset', () => {
     it('resets all state to initial values', () => {
       store.getState().setPlaybackState({ isPlaying: true, duration: 120000, playbackPosition: 50000, playbackRate: 1.5 });
@@ -262,6 +349,10 @@ describe('syncStore', () => {
       store.getState().setBufferPause('Alice');
       store.getState().showControls();
       store.getState().setPermissions({ canPlayPause: false, canSeek: false });
+      store.getState().setSubtitlesEnabled(true);
+      store.getState().setSubtitleTrackIndex(2);
+      store.getState().setAvailableSubtitleTracks([{ index: 2, language: 'eng', displayTitle: 'English', codec: 'srt', isDefault: true, isForced: false }]);
+      store.getState().addSteppedAway('user-1');
       store.getState().reset();
 
       const state = store.getState();
@@ -278,6 +369,10 @@ describe('syncStore', () => {
       expect(state.pauseSource).toBeNull();
       expect(state.controlsVisible).toBe(false);
       expect(state.permissions).toEqual({ canPlayPause: true, canSeek: true });
+      expect(state.subtitlesEnabled).toBe(false);
+      expect(state.subtitleTrackIndex).toBeNull();
+      expect(state.availableSubtitleTracks).toEqual([]);
+      expect(state.steppedAwayParticipantIds).toEqual([]);
     });
   });
 });

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { useStore } from 'zustand';
-import { buildStreamUrl } from '@jellysync/shared';
+import { buildStreamUrl, extractSubtitleTracks, getSubtitleUrl, useMovieDetails } from '@jellysync/shared';
 import type { ParticipantPermissions } from '@jellysync/shared';
 import { movieStore } from '../lib/movie';
 import { roomStore } from '../lib/room';
@@ -16,6 +16,8 @@ import {
   usePlayerKeyboard,
   PermissionSettings,
 } from '../features/player';
+import { useSteppedAway } from '../features/player/hooks/use-stepped-away.js';
+import { SteppedAwayToast } from '../features/player/components/stepped-away-toast.js';
 
 export default function PlayerPage() {
   const navigate = useNavigate();
@@ -31,6 +33,10 @@ export default function PlayerPage() {
   const duration = useStore(syncStore, (s) => s.duration);
   const bufferProgress = useStore(syncStore, (s) => s.bufferProgress);
   const permissions = useStore(syncStore, (s) => s.permissions);
+  const subtitlesEnabled = useStore(syncStore, (s) => s.subtitlesEnabled);
+  const subtitleTrackIndex = useStore(syncStore, (s) => s.subtitleTrackIndex);
+  const availableSubtitleTracks = useStore(syncStore, (s) => s.availableSubtitleTracks);
+  const steppedAwayParticipantIds = useStore(syncStore, (s) => s.steppedAwayParticipantIds);
   const prevMovieIdRef = useRef<string | null>(selectedMovie?.id ?? null);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
 
@@ -39,9 +45,13 @@ export default function PlayerPage() {
     return buildStreamUrl(serverUrl, token, selectedMovie.id);
   }, [selectedMovie, serverUrl, token]);
 
+  const userId = useStore(authStore, (s) => s.userId);
+  const { data: movieDetails } = useMovieDetails(serverUrl ?? '', token ?? '', userId ?? '', selectedMovie?.id);
+
   const { videoRef, playerInterface } = useHtmlVideo(streamUrl);
   const { requestPlay, requestPause, requestSeek, sendPermissionUpdate } = usePlaybackSync(playerInterface);
   const { controlsVisible, toggle, resetTimer, hide } = useControlsVisibility();
+  useSteppedAway();
 
   usePlayerKeyboard({
     isHost,
@@ -53,6 +63,64 @@ export default function PlayerPage() {
     onSeek: requestSeek,
     onHideControls: hide,
   });
+
+  // Extract subtitle tracks from movie's MediaSources
+  useEffect(() => {
+    if (!movieDetails?.MediaSources) return;
+    const tracks = extractSubtitleTracks(movieDetails.MediaSources);
+    syncStore.getState().setAvailableSubtitleTracks(tracks);
+    // Default to first English track, or first track if no English
+    if (tracks.length > 0 && syncStore.getState().subtitleTrackIndex === null) {
+      const englishTrack = tracks.find((t) => t.language === 'eng');
+      syncStore.getState().setSubtitleTrackIndex(englishTrack?.index ?? tracks[0].index);
+    }
+  }, [movieDetails]);
+
+  const handleSubtitleToggle = useCallback(() => {
+    const current = syncStore.getState().subtitlesEnabled;
+    syncStore.getState().setSubtitlesEnabled(!current);
+  }, []);
+
+  const subtitleUrl = useMemo(() => {
+    if (!subtitlesEnabled || subtitleTrackIndex === null || !serverUrl || !selectedMovie) return null;
+    const mediaSourceId = movieDetails?.MediaSources?.[0]?.Id;
+    if (!mediaSourceId) return null;
+    return getSubtitleUrl(serverUrl, selectedMovie.id, mediaSourceId, subtitleTrackIndex);
+  }, [subtitlesEnabled, subtitleTrackIndex, serverUrl, selectedMovie, movieDetails]);
+
+  // Manage subtitle <track> element on the video
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Remove existing subtitle tracks
+    const existingTracks = video.querySelectorAll('track[data-subtitle]');
+    existingTracks.forEach((t) => t.remove());
+
+    if (subtitleUrl) {
+      const track = document.createElement('track');
+      track.kind = 'subtitles';
+      track.src = subtitleUrl;
+      track.srclang = availableSubtitleTracks.find((t) => t.index === subtitleTrackIndex)?.language ?? 'eng';
+      track.label = availableSubtitleTracks.find((t) => t.index === subtitleTrackIndex)?.displayTitle ?? 'English';
+      track.default = true;
+      track.setAttribute('data-subtitle', 'true');
+      video.appendChild(track);
+
+      // Enable the track
+      if (video.textTracks.length > 0) {
+        const lastTrack = video.textTracks[video.textTracks.length - 1];
+        lastTrack.mode = 'showing';
+      }
+    }
+
+    return () => {
+      if (video) {
+        const tracks = video.querySelectorAll('track[data-subtitle]');
+        tracks.forEach((t) => t.remove());
+      }
+    };
+  }, [subtitleUrl, videoRef, subtitleTrackIndex, availableSubtitleTracks]);
 
   const handleOpenPermissions = useCallback(() => {
     setPermissionsOpen(true);
@@ -108,7 +176,11 @@ export default function PlayerPage() {
         onSeek={requestSeek}
         onBack={() => navigate(-1)}
         onOpenPermissions={isHost ? handleOpenPermissions : undefined}
+        subtitlesEnabled={subtitlesEnabled}
+        onSubtitleToggle={handleSubtitleToggle}
+        steppedAwayParticipantIds={steppedAwayParticipantIds}
       />
+      <SteppedAwayToast />
       {permissionsOpen && (
         <PermissionSettings
           permissions={permissions}
@@ -122,5 +194,7 @@ export default function PlayerPage() {
 
 const containerStyle: React.CSSProperties = {
   position: 'relative',
+  width: '100vw',
+  height: '100vh',
   animation: 'fadeIn 300ms ease-in forwards',
 };

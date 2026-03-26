@@ -7,3 +7,5 @@ export { ParticipantAvatars } from './components/participant-avatars.js';
 export { PermissionSettings } from './components/permission-settings.js';
 export { useControlsVisibility } from './hooks/use-controls-visibility.js';
 export { usePlayerKeyboard } from './hooks/use-player-keyboard.js';
+export { useSteppedAway } from './hooks/use-stepped-away.js';
+export { SteppedAwayToast } from './components/stepped-away-toast.js';

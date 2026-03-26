@@ -1,9 +1,11 @@
 import { createStore } from 'zustand/vanilla';
+import { persist, type StateStorage, createJSONStorage } from 'zustand/middleware';
 import type { ParticipantPermissions } from '../protocol/messages.js';
+import type { SubtitleTrack } from '../jellyfin/types.js';
 
 export type SyncStatus = 'synced' | 'syncing' | 'drifted';
 
-export type PauseSource = 'host' | 'buffer' | null;
+export type PauseSource = 'host' | 'buffer' | 'stepped-away' | null;
 
 export interface SyncState {
   playbackPosition: number;
@@ -19,6 +21,10 @@ export interface SyncState {
   pauseSource: PauseSource;
   controlsVisible: boolean;
   permissions: ParticipantPermissions;
+  subtitlesEnabled: boolean;
+  subtitleTrackIndex: number | null;
+  availableSubtitleTracks: SubtitleTrack[];
+  steppedAwayParticipantIds: string[];
 }
 
 export interface SyncActions {
@@ -33,6 +39,13 @@ export interface SyncActions {
   showControls: () => void;
   hideControls: () => void;
   setPermissions: (permissions: ParticipantPermissions) => void;
+  setSubtitlesEnabled: (enabled: boolean) => void;
+  setSubtitleTrackIndex: (index: number | null) => void;
+  setAvailableSubtitleTracks: (tracks: SubtitleTrack[]) => void;
+  addSteppedAway: (id: string) => void;
+  removeSteppedAway: (id: string) => void;
+  setSteppedAwayParticipants: (ids: string[]) => void;
+  setSteppedAwayPause: (displayName: string) => void;
   reset: () => void;
 }
 
@@ -54,10 +67,14 @@ const initialState: SyncState = {
   pauseSource: null,
   controlsVisible: false,
   permissions: defaultPermissions,
+  subtitlesEnabled: false,
+  subtitleTrackIndex: null,
+  availableSubtitleTracks: [],
+  steppedAwayParticipantIds: [],
 };
 
-export function createSyncStore() {
-  return createStore<SyncStore>()((set) => ({
+export function createSyncStore(storage?: StateStorage) {
+  const storeCreator = (set: (partial: Partial<SyncStore> | ((state: SyncStore) => Partial<SyncStore>)) => void): SyncStore => ({
     ...initialState,
     setPlaybackState: (state) => set(state),
     setBufferState: (state) => set(state),
@@ -70,8 +87,36 @@ export function createSyncStore() {
     showControls: () => set({ controlsVisible: true }),
     hideControls: () => set({ controlsVisible: false }),
     setPermissions: (permissions) => set({ permissions }),
+    setSubtitlesEnabled: (enabled) => set({ subtitlesEnabled: enabled }),
+    setSubtitleTrackIndex: (index) => set({ subtitleTrackIndex: index }),
+    setAvailableSubtitleTracks: (tracks) => set({ availableSubtitleTracks: tracks }),
+    addSteppedAway: (id) => set((state) => ({
+      steppedAwayParticipantIds: state.steppedAwayParticipantIds.includes(id)
+        ? state.steppedAwayParticipantIds
+        : [...state.steppedAwayParticipantIds, id],
+    })),
+    removeSteppedAway: (id) => set((state) => ({
+      steppedAwayParticipantIds: state.steppedAwayParticipantIds.filter((pid) => pid !== id),
+    })),
+    setSteppedAwayParticipants: (ids) => set({ steppedAwayParticipantIds: ids }),
+    setSteppedAwayPause: (displayName) => set({ pauseSource: 'stepped-away', bufferPausedBy: displayName }),
     reset: () => set(initialState),
-  }));
+  });
+
+  if (storage) {
+    return createStore<SyncStore>()(
+      persist(storeCreator, {
+        name: 'jellysync-subtitle-prefs',
+        storage: createJSONStorage(() => storage),
+        partialize: (state) => ({
+          subtitlesEnabled: state.subtitlesEnabled,
+          subtitleTrackIndex: state.subtitleTrackIndex,
+        }),
+      }),
+    );
+  }
+
+  return createStore<SyncStore>()(storeCreator);
 }
 
 export type SyncStoreInstance = ReturnType<typeof createSyncStore>;

@@ -23,6 +23,9 @@ export interface GlassPlayerControlsProps {
   onSeek: (positionMs: number) => void;
   onBack: () => void;
   onOpenPermissions?: () => void;
+  subtitlesEnabled?: boolean;
+  onSubtitleToggle?: () => void;
+  steppedAwayParticipantIds?: string[];
 }
 
 function formatTime(ms: number): string {
@@ -55,6 +58,9 @@ export function GlassPlayerControls({
   onSeek,
   onBack,
   onOpenPermissions,
+  subtitlesEnabled = false,
+  onSubtitleToggle,
+  steppedAwayParticipantIds = [],
 }: GlassPlayerControlsProps) {
   const seekBarWidthRef = useRef(0);
   const seekBarRef = useRef<View>(null);
@@ -163,9 +169,14 @@ export function GlassPlayerControls({
           <Text style={styles.movieTitle} numberOfLines={1}>{movieTitle}</Text>
           <View style={styles.topBarActions}>
             <Text style={styles.qualityLabel}>HD</Text>
-            <View style={styles.iconButton}>
-              <Text style={[styles.iconText, { opacity: 0.5 }]}>CC</Text>
-            </View>
+            <Pressable
+              onPress={onSubtitleToggle}
+              style={subtitlesEnabled ? styles.ccActiveButton : styles.iconButton}
+              accessibilityRole="button"
+              accessibilityLabel={subtitlesEnabled ? 'Disable subtitles' : 'Enable subtitles'}
+            >
+              <Text style={subtitlesEnabled ? styles.ccActiveText : styles.iconText}>CC</Text>
+            </Pressable>
             {isHost && onOpenPermissions && (
               <Pressable onPress={onOpenPermissions} style={styles.iconButton} accessibilityRole="button" accessibilityLabel="Permission settings">
                 <Text style={styles.iconText}>⚙</Text>
@@ -230,7 +241,7 @@ export function GlassPlayerControls({
 
         {/* Avatars + SyncStatusChip */}
         <View style={styles.bottomRow}>
-          <ParticipantAvatars participants={participants} hostId={hostId} />
+          <ParticipantAvatars participants={participants} hostId={hostId} steppedAwayParticipantIds={steppedAwayParticipantIds} />
           <SyncStatusChip />
         </View>
       </View>
@@ -306,6 +317,19 @@ const styles = StyleSheet.create({
   },
   iconText: {
     color: '#E6E0E9',
+    fontSize: 18,
+  },
+  ccActiveButton: {
+    padding: 8,
+    minWidth: 40,
+    minHeight: 40,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: 'rgba(110, 233, 224, 0.2)',
+    borderRadius: 8,
+  },
+  ccActiveText: {
+    color: '#6ee9e0',
     fontSize: 18,
   },
   centerControls: {

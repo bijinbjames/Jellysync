@@ -68,6 +68,7 @@ export interface RoomStatePayload {
   movie?: RoomMoviePayload | null;
   playback?: PlaybackStatePayload | null;
   permissions?: ParticipantPermissions;
+  steppedAwayParticipants?: string[];
 }
 
 // --- Sync message payloads ---
@@ -81,6 +82,7 @@ export interface SyncPausePayload {
   positionMs: number;
   serverTimestamp: number;
   bufferPausedBy?: string;
+  pauseSource?: 'buffer' | 'stepped-away';
 }
 
 export interface SyncSeekPayload {
@@ -115,6 +117,16 @@ export interface ParticipantPermissions {
 export interface PermissionUpdatePayload {
   permissions: ParticipantPermissions;
   updatedBy: string;
+}
+
+export interface SteppedAwayPayload {
+  participantId: string;
+  participantName: string;
+}
+
+export interface ReturnedPayload {
+  participantId: string;
+  participantName: string;
 }
 
 // --- Playback state in room:state ---
@@ -204,7 +216,15 @@ export interface PermissionUpdateMessage extends WsMessage<PermissionUpdatePaylo
   type: 'participant:permission-update';
 }
 
-export type ParticipantMessage = PermissionUpdateMessage;
+export interface SteppedAwayMessage extends WsMessage<SteppedAwayPayload> {
+  type: 'participant:stepped-away';
+}
+
+export interface ReturnedMessage extends WsMessage<ReturnedPayload> {
+  type: 'participant:returned';
+}
+
+export type ParticipantMessage = PermissionUpdateMessage | SteppedAwayMessage | ReturnedMessage;
 
 // --- Type guards ---
 
@@ -284,10 +304,14 @@ export function isClientSyncMessageType(type: string): boolean {
 
 const PARTICIPANT_MESSAGE_TYPES = new Set([
   'participant:permission-update',
+  'participant:stepped-away',
+  'participant:returned',
 ]);
 
 const CLIENT_PARTICIPANT_MESSAGE_TYPES = new Set([
   'participant:permission-update',
+  'participant:stepped-away',
+  'participant:returned',
 ]);
 
 export function isParticipantMessage(msg: WsMessage): msg is ParticipantMessage {
@@ -309,6 +333,18 @@ export function isValidPermissionUpdatePayload(payload: unknown): payload is Per
   if (typeof p.permissions !== 'object' || p.permissions === null) return false;
   const perms = p.permissions as Record<string, unknown>;
   return typeof perms.canPlayPause === 'boolean' && typeof perms.canSeek === 'boolean';
+}
+
+export function isValidSteppedAwayPayload(payload: unknown): payload is SteppedAwayPayload {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  return typeof p.participantId === 'string' && typeof p.participantName === 'string';
+}
+
+export function isValidReturnedPayload(payload: unknown): payload is ReturnedPayload {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  return typeof p.participantId === 'string' && typeof p.participantName === 'string';
 }
 
 export function createWsMessage<T>(type: string, payload: T): WsMessage<T> {

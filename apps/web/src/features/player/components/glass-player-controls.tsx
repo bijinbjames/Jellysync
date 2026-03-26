@@ -21,6 +21,9 @@ export interface GlassPlayerControlsProps {
   onSeek: (positionMs: number) => void;
   onBack: () => void;
   onOpenPermissions?: () => void;
+  subtitlesEnabled?: boolean;
+  onSubtitleToggle?: () => void;
+  steppedAwayParticipantIds?: string[];
 }
 
 function formatTime(ms: number): string {
@@ -53,6 +56,9 @@ export function GlassPlayerControls({
   onSeek,
   onBack,
   onOpenPermissions,
+  subtitlesEnabled = false,
+  onSubtitleToggle,
+  steppedAwayParticipantIds = [],
 }: GlassPlayerControlsProps) {
   const seekBarRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -175,7 +181,12 @@ export function GlassPlayerControls({
           <span style={movieTitleStyle}>{movieTitle}</span>
           <div style={topBarActionsStyle}>
             <span style={qualityLabelStyle}>HD</span>
-            <button type="button" style={iconButtonStyle} aria-label="Subtitles (coming soon)" disabled>
+            <button
+              type="button"
+              style={subtitlesEnabled ? ccActiveButtonStyle : iconButtonStyle}
+              aria-label={subtitlesEnabled ? 'Disable subtitles' : 'Enable subtitles'}
+              onClick={onSubtitleToggle}
+            >
               CC
             </button>
             {isHost && onOpenPermissions && (
@@ -257,7 +268,7 @@ export function GlassPlayerControls({
 
         {/* Avatars + SyncStatusChip */}
         <div style={bottomRowStyle}>
-          <ParticipantAvatars participants={participants} hostId={hostId} />
+          <ParticipantAvatars participants={participants} hostId={hostId} steppedAwayParticipantIds={steppedAwayParticipantIds} />
           <SyncStatusChip />
         </div>
       </div>
@@ -359,6 +370,13 @@ const iconButtonStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+};
+
+const ccActiveButtonStyle: React.CSSProperties = {
+  ...iconButtonStyle,
+  color: '#6ee9e0',
+  backgroundColor: 'rgba(110, 233, 224, 0.2)',
+  borderRadius: 8,
 };
 
 const centerControlsStyle: React.CSSProperties = {

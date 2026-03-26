@@ -5,23 +5,34 @@ export interface ParticipantAvatarsProps {
   participants: Participant[];
   hostId: string;
   maxVisible?: number;
+  steppedAwayParticipantIds?: string[];
 }
 
-export function ParticipantAvatars({ participants, hostId, maxVisible = 4 }: ParticipantAvatarsProps) {
+export function ParticipantAvatars({ participants, hostId, maxVisible = 4, steppedAwayParticipantIds = [] }: ParticipantAvatarsProps) {
   const visible = participants.slice(0, maxVisible);
   const overflow = participants.length - maxVisible;
 
   return (
     <View style={styles.container}>
-      {visible.map((p) => (
-        <View
-          key={p.id}
-          style={[styles.avatar, p.id === hostId && styles.hostAvatar]}
-          accessibilityLabel={`${p.displayName}${p.id === hostId ? ' (host)' : ''}`}
-        >
-          <Text style={styles.avatarText}>{p.displayName.charAt(0).toUpperCase()}</Text>
-        </View>
-      ))}
+      {visible.map((p) => {
+        const isSteppedAway = steppedAwayParticipantIds.includes(p.id);
+        return (
+          <View
+            key={p.id}
+            style={[
+              styles.avatar,
+              p.id === hostId && styles.hostAvatar,
+              isSteppedAway && styles.steppedAway,
+            ]}
+            accessibilityLabel={`${p.displayName}${p.id === hostId ? ' (host)' : ''}${isSteppedAway ? ' (stepped away)' : ''}`}
+          >
+            <Text style={styles.avatarText}>{p.displayName.charAt(0).toUpperCase()}</Text>
+            {isSteppedAway && (
+              <Text style={styles.steppedAwayIndicator}>💤</Text>
+            )}
+          </View>
+        );
+      })}
       {overflow > 0 && (
         <View style={styles.avatar}>
           <Text style={styles.overflowText}>+{overflow}</Text>
@@ -53,6 +64,15 @@ const styles = StyleSheet.create({
     color: '#E6E0E9',
     fontSize: 13,
     fontWeight: '600',
+  },
+  steppedAway: {
+    opacity: 0.4,
+  },
+  steppedAwayIndicator: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    fontSize: 10,
   },
   overflowText: {
     color: '#CAC4D0',

@@ -2,7 +2,8 @@ import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { StyleSheet, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useStore } from 'zustand';
-import { buildStreamUrl } from '@jellysync/shared';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import { buildStreamUrl, extractSubtitleTracks, useMovieDetails } from '@jellysync/shared';
 import type { ParticipantPermissions } from '@jellysync/shared';
 import { movieStore } from '../src/lib/movie';
 import { roomStore } from '../src/lib/room';
@@ -16,6 +17,8 @@ import {
   useControlsVisibility,
   PermissionSettings,
 } from '../src/features/player';
+import { useSteppedAway } from '../src/features/player/hooks/use-stepped-away.js';
+import { SteppedAwayToast } from '../src/features/player/components/stepped-away-toast.js';
 
 export default function PlayerScreen() {
   const router = useRouter();
@@ -31,9 +34,28 @@ export default function PlayerScreen() {
   const duration = useStore(syncStore, (s) => s.duration);
   const bufferProgress = useStore(syncStore, (s) => s.bufferProgress);
   const permissions = useStore(syncStore, (s) => s.permissions);
+  const subtitlesEnabled = useStore(syncStore, (s) => s.subtitlesEnabled);
+  const subtitleTrackIndex = useStore(syncStore, (s) => s.subtitleTrackIndex);
+  const steppedAwayParticipantIds = useStore(syncStore, (s) => s.steppedAwayParticipantIds);
+  const userId = useStore(authStore, (s) => s.userId);
   const prevMovieIdRef = useRef<string | null>(selectedMovie?.id ?? null);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let cancelled = false;
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
+      .then(() => {
+        if (cancelled) {
+          ScreenOrientation.unlockAsync().catch(() => {});
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      ScreenOrientation.unlockAsync().catch(() => {});
+    };
+  }, []);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -48,9 +70,45 @@ export default function PlayerScreen() {
     return buildStreamUrl(serverUrl, token, selectedMovie.id);
   }, [selectedMovie, serverUrl, token]);
 
+  const { data: movieDetails } = useMovieDetails(serverUrl ?? '', token ?? '', userId ?? '', selectedMovie?.id);
+
   const { player, playerInterface } = useVideoPlayer(streamUrl);
   const { requestPlay, requestPause, requestSeek, sendPermissionUpdate } = usePlaybackSync(playerInterface);
   const { controlsVisible, toggle, resetTimer, fadeAnim: controlsFadeAnim } = useControlsVisibility();
+  useSteppedAway();
+
+  // Extract subtitle tracks from movie's MediaSources
+  useEffect(() => {
+    if (!movieDetails?.MediaSources) return;
+    const tracks = extractSubtitleTracks(movieDetails.MediaSources);
+    syncStore.getState().setAvailableSubtitleTracks(tracks);
+    if (tracks.length > 0 && syncStore.getState().subtitleTrackIndex === null) {
+      const englishTrack = tracks.find((t) => t.language === 'eng');
+      syncStore.getState().setSubtitleTrackIndex(englishTrack?.index ?? tracks[0].index);
+    }
+  }, [movieDetails]);
+
+  // Configure expo-video subtitle track based on store state
+  useEffect(() => {
+    if (!player) return;
+    if (!subtitlesEnabled) {
+      player.subtitleTrack = null;
+      return;
+    }
+    const available = player.availableSubtitleTracks;
+    if (available.length === 0) return;
+    // Match by language from our extracted tracks
+    const storeState = syncStore.getState();
+    const selectedTrack = storeState.availableSubtitleTracks.find((t) => t.index === subtitleTrackIndex);
+    const lang = selectedTrack?.language ?? 'eng';
+    const match = available.find((t) => t.language === lang) ?? available[0];
+    player.subtitleTrack = match;
+  }, [player, subtitlesEnabled, subtitleTrackIndex]);
+
+  const handleSubtitleToggle = useCallback(() => {
+    const current = syncStore.getState().subtitlesEnabled;
+    syncStore.getState().setSubtitlesEnabled(!current);
+  }, []);
 
   const handleOpenPermissions = useCallback(() => {
     setPermissionsOpen(true);
@@ -107,8 +165,12 @@ export default function PlayerScreen() {
           onSeek={requestSeek}
           onBack={() => router.back()}
           onOpenPermissions={isHost ? handleOpenPermissions : undefined}
+          subtitlesEnabled={subtitlesEnabled}
+          onSubtitleToggle={handleSubtitleToggle}
+          steppedAwayParticipantIds={steppedAwayParticipantIds}
         />
       </Animated.View>
+      <SteppedAwayToast />
       <PermissionSettings
         visible={permissionsOpen}
         permissions={permissions}

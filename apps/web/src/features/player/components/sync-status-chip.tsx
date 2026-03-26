@@ -2,12 +2,16 @@ import { useEffect } from 'react';
 import { useStore } from 'zustand';
 import { syncStore } from '../../../lib/sync.js';
 
-type ChipState = 'synchronized' | 'buffering' | 'paused';
+type ChipState = 'synchronized' | 'buffering' | 'paused' | 'stepped-away';
 
 function useChipState(): { state: ChipState; label: string } {
   const pauseSource = useStore(syncStore, (s) => s.pauseSource);
   const bufferPausedBy = useStore(syncStore, (s) => s.bufferPausedBy);
   const syncStatus = useStore(syncStore, (s) => s.syncStatus);
+
+  if (pauseSource === 'stepped-away' && bufferPausedBy) {
+    return { state: 'stepped-away', label: `${bufferPausedBy.toUpperCase()} STEPPED AWAY` };
+  }
 
   if (pauseSource === 'buffer' && bufferPausedBy) {
     return { state: 'buffering', label: `WAITING FOR ${bufferPausedBy.toUpperCase()}...` };
@@ -37,6 +41,8 @@ export function SyncStatusChip() {
     ? 'rgba(196, 167, 231, 0.2)'  // secondary_container/20
     : state === 'buffering'
     ? 'rgba(239, 184, 200, 0.2)'  // tertiary_container/20
+    : state === 'stepped-away'
+    ? 'rgba(202, 196, 208, 0.2)'  // on_surface_variant/20
     : '#36343b';  // surface_container_high
 
   const dotColor = state === 'synchronized'

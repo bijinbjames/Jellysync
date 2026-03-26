@@ -3,12 +3,16 @@ import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useStore } from 'zustand';
 import { syncStore } from '../../../lib/sync.js';
 
-type ChipState = 'synchronized' | 'buffering' | 'paused';
+type ChipState = 'synchronized' | 'buffering' | 'paused' | 'stepped-away';
 
 function useChipState(): { state: ChipState; label: string } {
   const pauseSource = useStore(syncStore, (s) => s.pauseSource);
   const bufferPausedBy = useStore(syncStore, (s) => s.bufferPausedBy);
   const syncStatus = useStore(syncStore, (s) => s.syncStatus);
+
+  if (pauseSource === 'stepped-away' && bufferPausedBy) {
+    return { state: 'stepped-away', label: `${bufferPausedBy.toUpperCase()} STEPPED AWAY` };
+  }
 
   if (pauseSource === 'buffer' && bufferPausedBy) {
     return { state: 'buffering', label: `WAITING FOR ${bufferPausedBy.toUpperCase()}...` };
@@ -21,7 +25,7 @@ function useChipState(): { state: ChipState; label: string } {
   return { state: 'synchronized', label: 'SYNCHRONIZED' };
 }
 
-const COLORS = {
+const COLORS: Record<ChipState, { bg: string; dot: string }> = {
   synchronized: {
     bg: 'rgba(196, 167, 231, 0.2)',
     dot: '#D0BCFF',
@@ -32,6 +36,10 @@ const COLORS = {
   },
   paused: {
     bg: '#36343b',
+    dot: '#CAC4D0',
+  },
+  'stepped-away': {
+    bg: 'rgba(202, 196, 208, 0.2)',
     dot: '#CAC4D0',
   },
 };

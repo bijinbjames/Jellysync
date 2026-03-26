@@ -121,5 +121,83 @@ describe('RoomManager', () => {
       expect(result).toBeNull();
       expect(manager.getRoom(room.code)).toBeNull();
     });
+
+    it('cleans up stepped-away state when participant is removed', () => {
+      const room = manager.createRoom('host-1', 'Alice');
+      manager.joinRoom(room.code, 'user-2', 'Bob');
+      manager.markSteppedAway(room.code, 'user-2');
+      expect(room.steppedAwayParticipants.has('user-2')).toBe(true);
+      manager.removeParticipant('user-2');
+      expect(room.steppedAwayParticipants.has('user-2')).toBe(false);
+    });
+  });
+
+  describe('stepped-away tracking', () => {
+    it('initializes room with empty steppedAwayParticipants set', () => {
+      const room = manager.createRoom('host-1', 'Alice');
+      expect(room.steppedAwayParticipants).toBeInstanceOf(Set);
+      expect(room.steppedAwayParticipants.size).toBe(0);
+    });
+
+    it('markSteppedAway adds participant and returns true', () => {
+      const room = manager.createRoom('host-1', 'Alice');
+      const result = manager.markSteppedAway(room.code, 'host-1');
+      expect(result).toBe(true);
+      expect(room.steppedAwayParticipants.has('host-1')).toBe(true);
+    });
+
+    it('markSteppedAway returns false if already stepped away', () => {
+      const room = manager.createRoom('host-1', 'Alice');
+      manager.markSteppedAway(room.code, 'host-1');
+      const result = manager.markSteppedAway(room.code, 'host-1');
+      expect(result).toBe(false);
+    });
+
+    it('markSteppedAway returns false for non-existent room', () => {
+      expect(manager.markSteppedAway('NONEXIST', 'host-1')).toBe(false);
+    });
+
+    it('markReturned removes participant and returns true', () => {
+      const room = manager.createRoom('host-1', 'Alice');
+      manager.markSteppedAway(room.code, 'host-1');
+      const result = manager.markReturned(room.code, 'host-1');
+      expect(result).toBe(true);
+      expect(room.steppedAwayParticipants.has('host-1')).toBe(false);
+    });
+
+    it('markReturned returns false if not stepped away', () => {
+      const room = manager.createRoom('host-1', 'Alice');
+      const result = manager.markReturned(room.code, 'host-1');
+      expect(result).toBe(false);
+    });
+
+    it('markReturned returns false for non-existent room', () => {
+      expect(manager.markReturned('NONEXIST', 'host-1')).toBe(false);
+    });
+
+    it('isParticipantSteppedAway returns correct state', () => {
+      const room = manager.createRoom('host-1', 'Alice');
+      expect(manager.isParticipantSteppedAway(room.code, 'host-1')).toBe(false);
+      manager.markSteppedAway(room.code, 'host-1');
+      expect(manager.isParticipantSteppedAway(room.code, 'host-1')).toBe(true);
+      manager.markReturned(room.code, 'host-1');
+      expect(manager.isParticipantSteppedAway(room.code, 'host-1')).toBe(false);
+    });
+
+    it('isParticipantSteppedAway returns false for non-existent room', () => {
+      expect(manager.isParticipantSteppedAway('NONEXIST', 'host-1')).toBe(false);
+    });
+
+    it('supports multiple stepped-away participants', () => {
+      const room = manager.createRoom('host-1', 'Alice');
+      manager.joinRoom(room.code, 'user-2', 'Bob');
+      manager.joinRoom(room.code, 'user-3', 'Charlie');
+      manager.markSteppedAway(room.code, 'user-2');
+      manager.markSteppedAway(room.code, 'user-3');
+      expect(room.steppedAwayParticipants.size).toBe(2);
+      manager.markReturned(room.code, 'user-2');
+      expect(room.steppedAwayParticipants.size).toBe(1);
+      expect(room.steppedAwayParticipants.has('user-3')).toBe(true);
+    });
   });
 });

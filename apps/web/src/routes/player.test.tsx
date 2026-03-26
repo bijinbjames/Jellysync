@@ -6,6 +6,22 @@ import { movieStore } from '../lib/movie.js';
 import { roomStore } from '../lib/room.js';
 import { authStore } from '../lib/auth.js';
 
+vi.mock('@jellysync/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@jellysync/shared')>();
+  return {
+    ...actual,
+    useMovieDetails: () => ({ data: null, isLoading: false, error: null }),
+  };
+});
+
+vi.mock('../features/player/hooks/use-stepped-away.js', () => ({
+  useSteppedAway: vi.fn(),
+}));
+
+vi.mock('../features/player/components/stepped-away-toast.js', () => ({
+  SteppedAwayToast: () => null,
+}));
+
 vi.mock('../features/player', () => ({
   useHtmlVideo: () => ({
     videoRef: { current: null },
@@ -20,7 +36,16 @@ vi.mock('../features/player', () => ({
   HtmlVideoPlayer: ({ streamUrl }: { streamUrl: string }) => (
     <div data-testid="html-video-player" data-stream-url={streamUrl} />
   ),
-  usePlaybackSync: () => ({ requestPlay: vi.fn(), requestPause: vi.fn(), requestSeek: vi.fn(), isHost: false }),
+  usePlaybackSync: () => ({ requestPlay: vi.fn(), requestPause: vi.fn(), requestSeek: vi.fn(), isHost: false, sendPermissionUpdate: vi.fn() }),
+  useControlsVisibility: () => ({ controlsVisible: true, toggle: vi.fn(), resetTimer: vi.fn(), hide: vi.fn() }),
+  usePlayerKeyboard: vi.fn(),
+  GlassPlayerControls: (props: any) => (
+    <div data-testid="glass-player-controls">
+      <button aria-label="Back to lobby" onClick={props.onBack} />
+      {props.onOpenPermissions && <button aria-label="Change Movie" onClick={props.onOpenPermissions} />}
+    </div>
+  ),
+  PermissionSettings: (props: any) => <div data-testid="permission-settings" />,
   SyncStatusChip: () => <div data-testid="sync-status-chip" />,
 }));
 
