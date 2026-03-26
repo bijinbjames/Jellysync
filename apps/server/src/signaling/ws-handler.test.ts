@@ -3,7 +3,7 @@ import Fastify from 'fastify';
 import websocket from '@fastify/websocket';
 import { RoomManager } from '../rooms/index.js';
 import { registerWebSocketHandler } from './ws-handler.js';
-import { ROOM_MESSAGE_TYPE, SYNC_MESSAGE_TYPE, ERROR_CODE } from '@jellysync/shared';
+import { ROOM_MESSAGE_TYPE, SYNC_MESSAGE_TYPE, SIGNAL_MESSAGE_TYPE, ERROR_CODE } from '@jellysync/shared';
 
 async function createTestServer(roomManager: RoomManager) {
   const server = Fastify({ logger: false });
@@ -419,6 +419,143 @@ describe('ws-handler', () => {
       expect(room!.bufferingParticipantId).toBeNull();
 
       hostWs.close();
+    });
+  });
+
+  describe('signal message routing', () => {
+    // Collect all messages for a ws into a queue to avoid race conditions
+    function collectMessages(ws: WebSocket): { next: () => Promise<Record<string, unknown>> } {
+      const queue: Record<string, unknown>[] = [];
+      let resolver: ((msg: Record<string, unknown>) => void) | null = null;
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data as string);
+        if (resolver) {
+          const r = resolver;
+          resolver = null;
+          r(msg);
+        } else {
+          queue.push(msg);
+        }
+      };
+      return {
+        next: () => {
+          if (queue.length > 0) return Promise.resolve(queue.shift()!);
+          return new Promise((resolve) => { resolver = resolve; });
+        },
+      };
+    }
+
+    it('routes signal:offer to target participant', async () => {
+      const hostWs = await connectWs(address);
+      const hostMsgs = collectMessages(hostWs);
+      sendMessage(hostWs, ROOM_MESSAGE_TYPE.CREATE, { displayName: 'Alice' });
+      const hostRoom = await hostMsgs.next();
+      const roomCode = hostRoom.payload.roomCode as string;
+      const hostId = hostRoom.payload.participantId as string;
+
+      const guestWs = await connectWs(address);
+      const guestMsgs = collectMessages(guestWs);
+      sendMessage(guestWs, ROOM_MESSAGE_TYPE.JOIN, { roomCode, displayName: 'Bob' });
+      const guestRoom = await guestMsgs.next();
+      const guestId = guestRoom.payload.participantId as string;
+
+      // Consume host's room:state from guest join
+      await hostMsgs.next();
+
+      // Guest sends signal:offer to host
+      sendMessage(guestWs, SIGNAL_MESSAGE_TYPE.OFFER, {
+        targetParticipantId: hostId,
+        offer: { type: 'offer', sdp: 'v=0\r\ntest-offer' },
+      });
+
+      const received = await hostMsgs.next();
+      expect(received.type).toBe(SIGNAL_MESSAGE_TYPE.OFFER);
+      expect(received.payload.fromParticipantId).toBe(guestId);
+      expect(received.payload.offer).toEqual({ type: 'offer', sdp: 'v=0\r\ntest-offer' });
+
+      hostWs.close();
+      guestWs.close();
+    });
+
+    it('routes signal:answer to target participant', async () => {
+      const hostWs = await connectWs(address);
+      const hostMsgs = collectMessages(hostWs);
+      sendMessage(hostWs, ROOM_MESSAGE_TYPE.CREATE, { displayName: 'Alice' });
+      const hostRoom = await hostMsgs.next();
+      const roomCode = hostRoom.payload.roomCode as string;
+      const hostId = hostRoom.payload.participantId as string;
+
+      const guestWs = await connectWs(address);
+      const guestMsgs = collectMessages(guestWs);
+      sendMessage(guestWs, ROOM_MESSAGE_TYPE.JOIN, { roomCode, displayName: 'Bob' });
+      const guestRoom = await guestMsgs.next();
+      const guestId = guestRoom.payload.participantId as string;
+
+      // Consume host's room:state from guest join
+      await hostMsgs.next();
+      // Guest also received updated room:state from join
+      // (already consumed by guestMsgs.next above)
+
+      // Host sends signal:answer to guest
+      sendMessage(hostWs, SIGNAL_MESSAGE_TYPE.ANSWER, {
+        targetParticipantId: guestId,
+        answer: { type: 'answer', sdp: 'v=0\r\ntest-answer' },
+      });
+
+      const received = await guestMsgs.next();
+      expect(received.type).toBe(SIGNAL_MESSAGE_TYPE.ANSWER);
+      expect(received.payload.fromParticipantId).toBe(hostId);
+      expect(received.payload.answer).toEqual({ type: 'answer', sdp: 'v=0\r\ntest-answer' });
+
+      hostWs.close();
+      guestWs.close();
+    });
+
+    it('routes signal:ice-candidate to target participant', async () => {
+      const hostWs = await connectWs(address);
+      const hostMsgs = collectMessages(hostWs);
+      sendMessage(hostWs, ROOM_MESSAGE_TYPE.CREATE, { displayName: 'Alice' });
+      const hostRoom = await hostMsgs.next();
+      const roomCode = hostRoom.payload.roomCode as string;
+      const hostId = hostRoom.payload.participantId as string;
+
+      const guestWs = await connectWs(address);
+      const guestMsgs = collectMessages(guestWs);
+      sendMessage(guestWs, ROOM_MESSAGE_TYPE.JOIN, { roomCode, displayName: 'Bob' });
+      const guestRoom = await guestMsgs.next();
+      const guestId = guestRoom.payload.participantId as string;
+
+      // Consume host's room:state from guest join
+      await hostMsgs.next();
+
+      // Guest sends ICE candidate to host
+      sendMessage(guestWs, SIGNAL_MESSAGE_TYPE.ICE_CANDIDATE, {
+        targetParticipantId: hostId,
+        candidate: { candidate: 'candidate:1 ...', sdpMid: '0', sdpMLineIndex: 0 },
+      });
+
+      const received = await hostMsgs.next();
+      expect(received.type).toBe(SIGNAL_MESSAGE_TYPE.ICE_CANDIDATE);
+      expect(received.payload.fromParticipantId).toBe(guestId);
+      expect(received.payload.candidate).toEqual({ candidate: 'candidate:1 ...', sdpMid: '0', sdpMLineIndex: 0 });
+
+      hostWs.close();
+      guestWs.close();
+    });
+
+    it('returns error for signal message when not in room', async () => {
+      const ws = await connectWs(address);
+      const errorMsg = waitForMessage(ws);
+      sendMessage(ws, SIGNAL_MESSAGE_TYPE.OFFER, {
+        targetParticipantId: 'nonexistent',
+        offer: { type: 'offer', sdp: 'v=0\r\ntest' },
+      });
+
+      const received = await errorMsg;
+      expect(received.type).toBe('error');
+      expect(received.payload.code).toBe(ERROR_CODE.NOT_IN_ROOM);
+
+      ws.close();
     });
   });
 });

@@ -19,6 +19,7 @@ import {
 } from '../src/features/player';
 import { useSteppedAway } from '../src/features/player/hooks/use-stepped-away.js';
 import { SteppedAwayToast } from '../src/features/player/components/stepped-away-toast.js';
+import { useVoice } from '../src/features/voice/index.js';
 
 export default function PlayerScreen() {
   const router = useRouter();
@@ -76,6 +77,7 @@ export default function PlayerScreen() {
   const { requestPlay, requestPause, requestSeek, sendPermissionUpdate } = usePlaybackSync(playerInterface);
   const { controlsVisible, toggle, resetTimer, fadeAnim: controlsFadeAnim } = useControlsVisibility();
   useSteppedAway();
+  useVoice();
 
   // Extract subtitle tracks from movie's MediaSources
   useEffect(() => {

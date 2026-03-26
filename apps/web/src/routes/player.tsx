@@ -18,6 +18,7 @@ import {
 } from '../features/player';
 import { useSteppedAway } from '../features/player/hooks/use-stepped-away.js';
 import { SteppedAwayToast } from '../features/player/components/stepped-away-toast.js';
+import { useVoice } from '../features/voice/index.js';
 
 export default function PlayerPage() {
   const navigate = useNavigate();
@@ -52,6 +53,7 @@ export default function PlayerPage() {
   const { requestPlay, requestPause, requestSeek, sendPermissionUpdate } = usePlaybackSync(playerInterface);
   const { controlsVisible, toggle, resetTimer, hide } = useControlsVisibility();
   useSteppedAway();
+  useVoice();
 
   usePlayerKeyboard({
     isHost,

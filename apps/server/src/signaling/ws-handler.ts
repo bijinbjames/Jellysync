@@ -8,12 +8,14 @@ import {
   isClientRoomMessageType,
   isClientSyncMessageType,
   isClientParticipantMessageType,
+  isClientSignalMessageType,
   createWsError,
   createWsMessage,
   ERROR_CODE,
   ERROR_MESSAGE,
   PARTICIPANT_MESSAGE_TYPE,
   ROOM_MESSAGE_TYPE,
+  SIGNAL_MESSAGE_TYPE,
   SYNC_MESSAGE_TYPE,
   WS_RECONNECT,
   type WsMessage,
@@ -25,6 +27,7 @@ import {
 import { createSyncHandler } from '../sync/sync-handler.js';
 import { createPermissionHandler } from '../rooms/permissions.js';
 import { createSteppedAwayHandler } from '../rooms/stepped-away.js';
+import { createSignalingHandler } from './signaling-handler.js';
 
 const MAX_DISPLAY_NAME_LENGTH = 50;
 
@@ -108,6 +111,13 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
     getParticipantId: (socket) => connectionToParticipant.get(socket),
     sendTo,
     broadcastToRoom,
+  });
+
+  const signalingHandler = createSignalingHandler({
+    roomManager,
+    getParticipantId: (socket) => connectionToParticipant.get(socket),
+    sendTo,
+    getSocketByParticipantId: (id) => participantToConnection.get(id),
   });
 
   function cancelGraceTimer(participantId: string): void {
@@ -392,6 +402,17 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
 
       if (!isWsMessage(data)) {
         sendTo(socket, createWsError(ERROR_CODE.INVALID_MESSAGE, ERROR_MESSAGE[ERROR_CODE.INVALID_MESSAGE]));
+        return;
+      }
+
+      if (isClientSignalMessageType(data.type)) {
+        if (data.type === SIGNAL_MESSAGE_TYPE.OFFER) {
+          signalingHandler.handleSignalOffer(socket, data);
+        } else if (data.type === SIGNAL_MESSAGE_TYPE.ANSWER) {
+          signalingHandler.handleSignalAnswer(socket, data);
+        } else if (data.type === SIGNAL_MESSAGE_TYPE.ICE_CANDIDATE) {
+          signalingHandler.handleSignalIceCandidate(socket, data);
+        }
         return;
       }
 

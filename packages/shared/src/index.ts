@@ -5,3 +5,4 @@ export * from './stores/index.js';
 export * from './protocol/index.js';
 export * from './types/index.js';
 export * from './sync/index.js';
+export * from './voice/index.js';

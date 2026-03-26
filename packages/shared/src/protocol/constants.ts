@@ -33,6 +33,13 @@ export const PARTICIPANT_MESSAGE_TYPE = {
   RETURNED: 'participant:returned',
 } as const;
 
+// Signal message types (WebRTC signaling)
+export const SIGNAL_MESSAGE_TYPE = {
+  OFFER: 'signal:offer',
+  ANSWER: 'signal:answer',
+  ICE_CANDIDATE: 'signal:ice-candidate',
+} as const;
+
 // Sync engine constants
 export const SYNC_CONFIG = {
   SYNC_THRESHOLD_MS: 500,

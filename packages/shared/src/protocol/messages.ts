@@ -129,6 +129,23 @@ export interface ReturnedPayload {
   participantName: string;
 }
 
+// --- Signal message payloads (WebRTC signaling) ---
+
+export interface SignalOfferPayload {
+  targetParticipantId: string;
+  offer: { type: 'offer'; sdp: string };
+}
+
+export interface SignalAnswerPayload {
+  targetParticipantId: string;
+  answer: { type: 'answer'; sdp: string };
+}
+
+export interface SignalIceCandidatePayload {
+  targetParticipantId: string;
+  candidate: { candidate: string; sdpMid: string | null; sdpMLineIndex: number | null };
+}
+
 // --- Playback state in room:state ---
 
 export interface PlaybackStatePayload {
@@ -225,6 +242,22 @@ export interface ReturnedMessage extends WsMessage<ReturnedPayload> {
 }
 
 export type ParticipantMessage = PermissionUpdateMessage | SteppedAwayMessage | ReturnedMessage;
+
+// --- Signal discriminated union types ---
+
+export interface SignalOfferMessage extends WsMessage<SignalOfferPayload> {
+  type: 'signal:offer';
+}
+
+export interface SignalAnswerMessage extends WsMessage<SignalAnswerPayload> {
+  type: 'signal:answer';
+}
+
+export interface SignalIceCandidateMessage extends WsMessage<SignalIceCandidatePayload> {
+  type: 'signal:ice-candidate';
+}
+
+export type SignalMessage = SignalOfferMessage | SignalAnswerMessage | SignalIceCandidateMessage;
 
 // --- Type guards ---
 
@@ -345,6 +378,63 @@ export function isValidReturnedPayload(payload: unknown): payload is ReturnedPay
   if (typeof payload !== 'object' || payload === null) return false;
   const p = payload as Record<string, unknown>;
   return typeof p.participantId === 'string' && typeof p.participantName === 'string';
+}
+
+// --- Signal type guards ---
+
+const SIGNAL_MESSAGE_TYPES = new Set([
+  'signal:offer',
+  'signal:answer',
+  'signal:ice-candidate',
+]);
+
+const CLIENT_SIGNAL_MESSAGE_TYPES = new Set([
+  'signal:offer',
+  'signal:answer',
+  'signal:ice-candidate',
+]);
+
+export function isSignalMessage(msg: WsMessage): msg is SignalMessage {
+  return typeof msg.type === 'string' && SIGNAL_MESSAGE_TYPES.has(msg.type);
+}
+
+export function isValidSignalMessageType(type: string): boolean {
+  return SIGNAL_MESSAGE_TYPES.has(type);
+}
+
+export function isClientSignalMessageType(type: string): boolean {
+  return CLIENT_SIGNAL_MESSAGE_TYPES.has(type);
+}
+
+export function isValidSignalOfferPayload(payload: unknown): payload is SignalOfferPayload {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.targetParticipantId !== 'string') return false;
+  if (typeof p.offer !== 'object' || p.offer === null) return false;
+  const offer = p.offer as Record<string, unknown>;
+  return offer.type === 'offer' && typeof offer.sdp === 'string';
+}
+
+export function isValidSignalAnswerPayload(payload: unknown): payload is SignalAnswerPayload {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.targetParticipantId !== 'string') return false;
+  if (typeof p.answer !== 'object' || p.answer === null) return false;
+  const answer = p.answer as Record<string, unknown>;
+  return answer.type === 'answer' && typeof answer.sdp === 'string';
+}
+
+export function isValidSignalIceCandidatePayload(payload: unknown): payload is SignalIceCandidatePayload {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.targetParticipantId !== 'string') return false;
+  if (typeof p.candidate !== 'object' || p.candidate === null) return false;
+  const candidate = p.candidate as Record<string, unknown>;
+  return (
+    typeof candidate.candidate === 'string' &&
+    (candidate.sdpMid === null || typeof candidate.sdpMid === 'string') &&
+    (candidate.sdpMLineIndex === null || typeof candidate.sdpMLineIndex === 'number')
+  );
 }
 
 export function createWsMessage<T>(type: string, payload: T): WsMessage<T> {

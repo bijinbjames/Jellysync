@@ -1,0 +1,11 @@
+services:
+  coturn:
+    image: coturn/coturn:4.9
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    environment:
+      - TURN_USERNAME=${JELLYSYNC_TURN_USERNAME:-jellysync}
+      - TURN_PASSWORD=${JELLYSYNC_TURN_CREDENTIAL:-changeme}
+    command: ["-n", "--user=${JELLYSYNC_TURN_USERNAME:-jellysync}:${JELLYSYNC_TURN_CREDENTIAL:-changeme}"]
