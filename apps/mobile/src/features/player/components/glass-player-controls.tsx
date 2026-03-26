@@ -23,6 +23,7 @@ export interface GlassPlayerControlsProps {
   onSeek: (positionMs: number) => void;
   onBack: () => void;
   onOpenPermissions?: () => void;
+  onVolumePress?: () => void;
   subtitlesEnabled?: boolean;
   onSubtitleToggle?: () => void;
   steppedAwayParticipantIds?: string[];
@@ -58,6 +59,7 @@ export function GlassPlayerControls({
   onSeek,
   onBack,
   onOpenPermissions,
+  onVolumePress,
   subtitlesEnabled = false,
   onSubtitleToggle,
   steppedAwayParticipantIds = [],
@@ -176,6 +178,9 @@ export function GlassPlayerControls({
               accessibilityLabel={subtitlesEnabled ? 'Disable subtitles' : 'Enable subtitles'}
             >
               <Text style={subtitlesEnabled ? styles.ccActiveText : styles.iconText}>CC</Text>
+            </Pressable>
+            <Pressable onPress={onVolumePress} style={styles.iconButton} accessibilityRole="button" accessibilityLabel="Volume controls">
+              <Text style={styles.iconText}>🔊</Text>
             </Pressable>
             {isHost && onOpenPermissions && (
               <Pressable onPress={onOpenPermissions} style={styles.iconButton} accessibilityRole="button" accessibilityLabel="Permission settings">

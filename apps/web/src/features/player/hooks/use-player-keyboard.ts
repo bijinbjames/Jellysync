@@ -11,6 +11,7 @@ export interface UsePlayerKeyboardOptions {
   onPause: () => void;
   onSeek: (positionMs: number) => void;
   onHideControls: () => void;
+  onToggleMute?: () => void;
 }
 
 function isInputElement(target: EventTarget | null): boolean {
@@ -28,20 +29,21 @@ export function usePlayerKeyboard({
   onPause,
   onSeek,
   onHideControls,
+  onToggleMute,
 }: UsePlayerKeyboardOptions) {
   // Store callbacks in refs to avoid re-registering the listener on every change
   const stateRef = useRef({ isHost, permissions, isPlaying, controlsVisible });
   stateRef.current = { isHost, permissions, isPlaying, controlsVisible };
 
-  const callbacksRef = useRef({ onPlay, onPause, onSeek, onHideControls });
-  callbacksRef.current = { onPlay, onPause, onSeek, onHideControls };
+  const callbacksRef = useRef({ onPlay, onPause, onSeek, onHideControls, onToggleMute });
+  callbacksRef.current = { onPlay, onPause, onSeek, onHideControls, onToggleMute };
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (isInputElement(e.target)) return;
 
       const { isHost: host, permissions: perms, isPlaying: playing, controlsVisible: visible } = stateRef.current;
-      const { onPlay: play, onPause: pause, onSeek: seek, onHideControls: hideControls } = callbacksRef.current;
+      const { onPlay: play, onPause: pause, onSeek: seek, onHideControls: hideControls, onToggleMute: muteToggle } = callbacksRef.current;
       const canPlayPause = host || perms.canPlayPause;
       const canSeek = host || perms.canSeek;
 
@@ -73,7 +75,8 @@ export function usePlayerKeyboard({
           break;
         case 'm':
         case 'M':
-          // Mute toggle placeholder (Epic 5)
+          e.preventDefault();
+          muteToggle?.();
           break;
         case 'f':
         case 'F':

@@ -5,9 +5,11 @@ import {
   enforceOpusMinBitrate,
   SIGNAL_MESSAGE_TYPE,
   ROOM_MESSAGE_TYPE,
+  PARTICIPANT_MESSAGE_TYPE,
   createWsMessage,
   type WsMessage,
   type RoomStatePayload,
+  type ParticipantMicStatePayload,
   type VoiceConfig,
   type PeerConnectionState,
 } from '@jellysync/shared';
@@ -35,7 +37,13 @@ function getIceServers(): RTCIceServer[] {
   return servers;
 }
 
-export function useVoice(): void {
+export interface UseVoiceReturn {
+  managerRef: React.RefObject<WebRTCManager | null>;
+  setParticipantVolume: (participantId: string, volume: number) => void;
+  setVoiceGain: (gain: number) => void;
+}
+
+export function useVoice(): UseVoiceReturn {
   const { send, subscribe } = useWs();
   const participantId = useStore(roomStore, (s) => s.participantId);
   const roomCode = useStore(roomStore, (s) => s.roomCode);
@@ -68,6 +76,10 @@ export function useVoice(): void {
     const audio = new Audio();
     audio.srcObject = stream;
     audio.autoplay = true;
+    // Apply stored volume preferences on creation
+    const storedVolume = voiceStore.getState().volumeLevels.get(pId) ?? 1.0;
+    const gain = voiceStore.getState().voiceGain;
+    audio.volume = Math.max(0, Math.min(1, storedVolume * gain));
     audioElementsRef.current.set(pId, audio);
   }, []);
 
@@ -92,6 +104,10 @@ export function useVoice(): void {
       .getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })
       .then((stream) => {
         if (managerRef.current === manager) {
+          // Mute tracks before adding to peer connection to prevent audio leakage window
+          if (voiceStore.getState().isMuted) {
+            stream.getAudioTracks().forEach((t) => { t.enabled = false; });
+          }
           manager.addLocalStream(stream);
         } else {
           stream.getTracks().forEach((t) => t.stop());
@@ -187,11 +203,20 @@ export function useVoice(): void {
       }
     });
 
+    // Subscribe to remote participant mic-state broadcasts
+    const unsubMicState = subscribe(PARTICIPANT_MESSAGE_TYPE.MIC_STATE, (msg: WsMessage) => {
+      const payload = msg.payload as ParticipantMicStatePayload;
+      if (payload.participantId) {
+        voiceStore.getState().setPeerMuted(payload.participantId, payload.isMuted);
+      }
+    });
+
     return () => {
       unsubOffer();
       unsubAnswer();
       unsubIce();
       unsubRoomState();
+      unsubMicState();
       manager.dispose();
       managerRef.current = null;
       hasInitiatedOffersRef.current = false;
@@ -204,4 +229,23 @@ export function useVoice(): void {
       voiceStore.getState().reset();
     };
   }, [roomCode, participantId, subscribe, sendSignalingMessage, onConnectionStateChange, onLocalStream, onRemoteStream]);
+
+  const setParticipantVolume = useCallback((participantId: string, volume: number) => {
+    voiceStore.getState().setVolume(participantId, volume);
+    const audio = audioElementsRef.current.get(participantId);
+    if (audio) {
+      const gain = voiceStore.getState().voiceGain;
+      audio.volume = Math.max(0, Math.min(1, volume * gain));
+    }
+  }, []);
+
+  const setVoiceGain = useCallback((gain: number) => {
+    voiceStore.getState().setVoiceGain(gain);
+    for (const [pId, audio] of audioElementsRef.current) {
+      const vol = voiceStore.getState().volumeLevels.get(pId) ?? 1.0;
+      audio.volume = Math.max(0, Math.min(1, vol * gain));
+    }
+  }, []);
+
+  return { managerRef, setParticipantVolume, setVoiceGain };
 }

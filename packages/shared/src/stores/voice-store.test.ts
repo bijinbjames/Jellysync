@@ -141,6 +141,34 @@ describe('voice-store', () => {
     });
   });
 
+  describe('setVoiceGain', () => {
+    it('defaults to 1.0', () => {
+      expect(store.getState().voiceGain).toBe(1.0);
+    });
+
+    it('sets voice gain', () => {
+      store.getState().setVoiceGain(0.5);
+      expect(store.getState().voiceGain).toBe(0.5);
+    });
+
+    it('clamps voice gain to 0 minimum', () => {
+      store.getState().setVoiceGain(-0.5);
+      expect(store.getState().voiceGain).toBe(0);
+    });
+
+    it('clamps voice gain to 1 maximum', () => {
+      store.getState().setVoiceGain(1.5);
+      expect(store.getState().voiceGain).toBe(1);
+    });
+
+    it('allows edge values 0 and 1', () => {
+      store.getState().setVoiceGain(0);
+      expect(store.getState().voiceGain).toBe(0);
+      store.getState().setVoiceGain(1);
+      expect(store.getState().voiceGain).toBe(1);
+    });
+  });
+
   describe('reset', () => {
     it('resets all state to initial values but preserves isMuted', () => {
       store.getState().setVoiceEnabled(true);
@@ -157,6 +185,7 @@ describe('voice-store', () => {
       expect(state.peerConnections.size).toBe(0);
       expect(state.localStreamActive).toBe(false);
       expect(state.volumeLevels.size).toBe(0);
+      expect(state.voiceGain).toBe(1.0);
     });
   });
 });

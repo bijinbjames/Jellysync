@@ -129,6 +129,11 @@ export interface ReturnedPayload {
   participantName: string;
 }
 
+export interface ParticipantMicStatePayload {
+  participantId?: string; // injected by server in broadcasts; absent in client→server messages
+  isMuted: boolean;
+}
+
 // --- Signal message payloads (WebRTC signaling) ---
 
 export interface SignalOfferPayload {
@@ -241,7 +246,11 @@ export interface ReturnedMessage extends WsMessage<ReturnedPayload> {
   type: 'participant:returned';
 }
 
-export type ParticipantMessage = PermissionUpdateMessage | SteppedAwayMessage | ReturnedMessage;
+export interface ParticipantMicStateMessage extends WsMessage<ParticipantMicStatePayload> {
+  type: 'participant:mic-state';
+}
+
+export type ParticipantMessage = PermissionUpdateMessage | SteppedAwayMessage | ReturnedMessage | ParticipantMicStateMessage;
 
 // --- Signal discriminated union types ---
 
@@ -339,12 +348,14 @@ const PARTICIPANT_MESSAGE_TYPES = new Set([
   'participant:permission-update',
   'participant:stepped-away',
   'participant:returned',
+  'participant:mic-state',
 ]);
 
 const CLIENT_PARTICIPANT_MESSAGE_TYPES = new Set([
   'participant:permission-update',
   'participant:stepped-away',
   'participant:returned',
+  'participant:mic-state',
 ]);
 
 export function isParticipantMessage(msg: WsMessage): msg is ParticipantMessage {
@@ -378,6 +389,13 @@ export function isValidReturnedPayload(payload: unknown): payload is ReturnedPay
   if (typeof payload !== 'object' || payload === null) return false;
   const p = payload as Record<string, unknown>;
   return typeof p.participantId === 'string' && typeof p.participantName === 'string';
+}
+
+export function isValidParticipantMicStatePayload(payload: unknown): payload is ParticipantMicStatePayload {
+  if (typeof payload !== 'object' || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  return typeof p.isMuted === 'boolean' &&
+    (p.participantId === undefined || typeof p.participantId === 'string');
 }
 
 // --- Signal type guards ---

@@ -8,8 +8,17 @@ import {
 } from '@jellysync/shared';
 import { useWs } from '../../../shared/providers/websocket-provider.js';
 import { roomStore } from '../../../lib/room.js';
+import { syncStore } from '../../../lib/sync.js';
+import { voiceStore } from '../../../lib/voice.js';
 
 const STEPPED_AWAY_DEBOUNCE_MS = 5000;
+
+/** Returns true if the user is still engaged via background audio (movie playing or mic active). */
+function isBackgroundAudioActive(): boolean {
+  const moviePlaying = syncStore.getState().isPlaying;
+  const micActive = voiceStore.getState().isVoiceEnabled && !voiceStore.getState().isMuted;
+  return moviePlaying || micActive;
+}
 
 export function useSteppedAway() {
   const { send } = useWs();
@@ -36,6 +45,8 @@ export function useSteppedAway() {
           timerRef.current = null;
           // Re-check AppState — user may have returned during debounce
           if (AppState.currentState === 'active') return;
+          // Suppress stepped-away if background audio is active (movie playing or mic unmuted)
+          if (isBackgroundAudioActive()) return;
           isSteppedAwayRef.current = true;
           const info = getParticipantInfo();
           sendRef.current(createWsMessage(PARTICIPANT_MESSAGE_TYPE.STEPPED_AWAY, {

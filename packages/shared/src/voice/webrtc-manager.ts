@@ -156,6 +156,14 @@ export class WebRTCManager {
     await entry.connection.addIceCandidate(new RTCIceCandidate(candidate));
   }
 
+  muteLocalAudio(muted: boolean): void {
+    if (this.localStream) {
+      for (const track of this.localStream.getAudioTracks()) {
+        track.enabled = !muted;
+      }
+    }
+  }
+
   addLocalStream(stream: MediaStream): void {
     this.localStream = stream;
     this.callbacks.onLocalStream(stream);

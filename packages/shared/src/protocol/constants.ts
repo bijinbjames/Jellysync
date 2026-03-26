@@ -31,6 +31,7 @@ export const PARTICIPANT_MESSAGE_TYPE = {
   PERMISSION_UPDATE: 'participant:permission-update',
   STEPPED_AWAY: 'participant:stepped-away',
   RETURNED: 'participant:returned',
+  MIC_STATE: 'participant:mic-state',
 } as const;
 
 // Signal message types (WebRTC signaling)

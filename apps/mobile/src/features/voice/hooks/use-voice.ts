@@ -5,9 +5,11 @@ import {
   enforceOpusMinBitrate,
   SIGNAL_MESSAGE_TYPE,
   ROOM_MESSAGE_TYPE,
+  PARTICIPANT_MESSAGE_TYPE,
   createWsMessage,
   type WsMessage,
   type RoomStatePayload,
+  type ParticipantMicStatePayload,
   type VoiceConfig,
   type PeerConnectionState,
 } from '@jellysync/shared';
@@ -50,7 +52,7 @@ function setupWebRTCGlobals() {
   }
 }
 
-export function useVoice(): void {
+export function useVoice(): { managerRef: React.RefObject<WebRTCManager | null> } {
   const { send, subscribe } = useWs();
   const participantId = useStore(roomStore, (s) => s.participantId);
   const roomCode = useStore(roomStore, (s) => s.roomCode);
@@ -97,6 +99,10 @@ export function useVoice(): void {
       .getUserMedia({ audio: true })
       .then((stream) => {
         if (managerRef.current === manager) {
+          // Mute tracks before adding to peer connection to prevent audio leakage window
+          if (voiceStore.getState().isMuted) {
+            (stream as unknown as MediaStream).getAudioTracks().forEach((t) => { t.enabled = false; });
+          }
           manager.addLocalStream(stream as unknown as MediaStream);
         } else {
           (stream as unknown as MediaStream).getTracks().forEach((t) => t.stop());
@@ -185,15 +191,26 @@ export function useVoice(): void {
       }
     });
 
+    // Subscribe to remote participant mic-state broadcasts
+    const unsubMicState = subscribe(PARTICIPANT_MESSAGE_TYPE.MIC_STATE, (msg: WsMessage) => {
+      const payload = msg.payload as ParticipantMicStatePayload;
+      if (payload.participantId) {
+        voiceStore.getState().setPeerMuted(payload.participantId, payload.isMuted);
+      }
+    });
+
     return () => {
       unsubOffer();
       unsubAnswer();
       unsubIce();
       unsubRoomState();
+      unsubMicState();
       manager.dispose();
       managerRef.current = null;
       hasInitiatedOffersRef.current = false;
       voiceStore.getState().reset();
     };
   }, [roomCode, participantId, subscribe, sendSignalingMessage, onConnectionStateChange, onLocalStream, onRemoteStream]);
+
+  return { managerRef };
 }

@@ -277,6 +277,41 @@ describe('WebRTCManager', () => {
     });
   });
 
+  describe('muteLocalAudio', () => {
+    it('sets audio track enabled to false when muting', () => {
+      const mockTrack1 = { kind: 'audio', enabled: true } as MediaStreamTrack;
+      const mockTrack2 = { kind: 'audio', enabled: true } as MediaStreamTrack;
+      const mockStream = {
+        getTracks: () => [mockTrack1, mockTrack2],
+        getAudioTracks: () => [mockTrack1, mockTrack2],
+      } as unknown as MediaStream;
+      manager.addLocalStream(mockStream);
+
+      manager.muteLocalAudio(true);
+
+      expect(mockTrack1.enabled).toBe(false);
+      expect(mockTrack2.enabled).toBe(false);
+    });
+
+    it('sets audio track enabled to true when unmuting', () => {
+      const mockTrack = { kind: 'audio', enabled: false } as MediaStreamTrack;
+      const mockStream = {
+        getTracks: () => [mockTrack],
+        getAudioTracks: () => [mockTrack],
+      } as unknown as MediaStream;
+      manager.addLocalStream(mockStream);
+
+      manager.muteLocalAudio(false);
+
+      expect(mockTrack.enabled).toBe(true);
+    });
+
+    it('does nothing when no local stream is set', () => {
+      // Should not throw
+      expect(() => manager.muteLocalAudio(true)).not.toThrow();
+    });
+  });
+
   describe('addLocalStream', () => {
     it('fires onLocalStream callback', () => {
       const mockStream = { getTracks: () => [] } as unknown as MediaStream;

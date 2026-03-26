@@ -5,6 +5,7 @@ type ParticipantChipVariant = 'host' | 'participant' | 'empty';
 interface FilledProps {
   variant: 'host' | 'participant';
   displayName: string;
+  isMuted?: boolean;
 }
 
 interface EmptyProps {
@@ -18,6 +19,15 @@ function MicIcon({ color }: { color: string }) {
   return (
     <View className={`w-5 h-5 items-center justify-center`}>
       <Text className={`text-xs ${color}`}>{'\uD83C\uDF99'}</Text>
+    </View>
+  );
+}
+
+function MicOffIcon({ color }: { color: string }) {
+  return (
+    <View className="w-5 h-5 items-center justify-center">
+      <Text className={`text-xs ${color}`}>{'\uD83C\uDF99'}</Text>
+      <View className="absolute w-5 h-[1.5px] bg-error rotate-45" />
     </View>
   );
 }
@@ -50,14 +60,14 @@ export function ParticipantChip(props: ParticipantChipProps) {
     );
   }
 
-  const { variant, displayName } = props;
+  const { variant, displayName, isMuted } = props;
   const isHost = variant === 'host';
-  const micColor = isHost ? 'text-primary' : 'text-on-surface';
+  const micColor = isMuted ? 'text-error' : isHost ? 'text-primary' : 'text-on-surface';
 
   return (
     <View
       className="flex-row items-center p-3 rounded-xl bg-surface-container"
-      accessibilityLabel={`${displayName}${isHost ? ', Host' : ''}`}
+      accessibilityLabel={`${displayName}${isHost ? ', Host' : ''}${isMuted ? ', muted' : ''}`}
     >
       <Avatar name={displayName} />
       <View className="flex-1 ml-3">
@@ -68,7 +78,7 @@ export function ParticipantChip(props: ParticipantChipProps) {
           )}
         </Text>
       </View>
-      <MicIcon color={micColor} />
+      {isMuted ? <MicOffIcon color={micColor} /> : <MicIcon color={micColor} />}
     </View>
   );
 }

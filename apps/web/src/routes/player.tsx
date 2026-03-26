@@ -7,6 +7,7 @@ import { movieStore } from '../lib/movie';
 import { roomStore } from '../lib/room';
 import { authStore } from '../lib/auth';
 import { syncStore } from '../lib/sync';
+import { voiceStore } from '../lib/voice';
 import {
   HtmlVideoPlayer,
   useHtmlVideo,
@@ -16,9 +17,11 @@ import {
   usePlayerKeyboard,
   PermissionSettings,
 } from '../features/player';
+import { VolumeOverlay } from '../features/player/components/volume-overlay.js';
 import { useSteppedAway } from '../features/player/hooks/use-stepped-away.js';
 import { SteppedAwayToast } from '../features/player/components/stepped-away-toast.js';
-import { useVoice } from '../features/voice/index.js';
+import { MicToggleFAB } from '../features/player/components/mic-toggle-fab.js';
+import { useVoice, useMicToggle } from '../features/voice/index.js';
 
 export default function PlayerPage() {
   const navigate = useNavigate();
@@ -27,6 +30,8 @@ export default function PlayerPage() {
   const roomCode = useStore(roomStore, (s) => s.roomCode);
   const hostId = useStore(roomStore, (s) => s.hostId);
   const participants = useStore(roomStore, (s) => s.participants);
+  const participantId = useStore(roomStore, (s) => s.participantId);
+  const isVoiceEnabled = useStore(voiceStore, (s) => s.isVoiceEnabled);
   const serverUrl = useStore(authStore, (s) => s.serverUrl);
   const token = useStore(authStore, (s) => s.token);
   const isPlaying = useStore(syncStore, (s) => s.isPlaying);
@@ -40,6 +45,7 @@ export default function PlayerPage() {
   const steppedAwayParticipantIds = useStore(syncStore, (s) => s.steppedAwayParticipantIds);
   const prevMovieIdRef = useRef<string | null>(selectedMovie?.id ?? null);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const [volumeOverlayOpen, setVolumeOverlayOpen] = useState(false);
 
   const streamUrl = useMemo(() => {
     if (!selectedMovie || !serverUrl || !token) return null;
@@ -53,7 +59,8 @@ export default function PlayerPage() {
   const { requestPlay, requestPause, requestSeek, sendPermissionUpdate } = usePlaybackSync(playerInterface);
   const { controlsVisible, toggle, resetTimer, hide } = useControlsVisibility();
   useSteppedAway();
-  useVoice();
+  const { managerRef, setParticipantVolume, setVoiceGain } = useVoice();
+  const { isMuted, toggleMute } = useMicToggle(managerRef);
 
   usePlayerKeyboard({
     isHost,
@@ -64,6 +71,7 @@ export default function PlayerPage() {
     onPause: requestPause,
     onSeek: requestSeek,
     onHideControls: hide,
+    onToggleMute: toggleMute,
   });
 
   // Extract subtitle tracks from movie's MediaSources
@@ -132,6 +140,21 @@ export default function PlayerPage() {
     setPermissionsOpen(false);
   }, []);
 
+  // Dismiss volume overlay when controls auto-hide
+  useEffect(() => {
+    if (!controlsVisible) {
+      setVolumeOverlayOpen(false);
+    }
+  }, [controlsVisible]);
+
+  const handleOpenVolume = useCallback(() => {
+    setVolumeOverlayOpen(true);
+  }, []);
+
+  const handleCloseVolume = useCallback(() => {
+    setVolumeOverlayOpen(false);
+  }, []);
+
   const handleUpdatePermissions = useCallback((newPermissions: ParticipantPermissions) => {
     sendPermissionUpdate(newPermissions);
   }, [sendPermissionUpdate]);
@@ -178,16 +201,26 @@ export default function PlayerPage() {
         onSeek={requestSeek}
         onBack={() => navigate(-1)}
         onOpenPermissions={isHost ? handleOpenPermissions : undefined}
+        onVolumePress={handleOpenVolume}
         subtitlesEnabled={subtitlesEnabled}
         onSubtitleToggle={handleSubtitleToggle}
         steppedAwayParticipantIds={steppedAwayParticipantIds}
       />
+      {isVoiceEnabled && <MicToggleFAB isMuted={isMuted} onToggle={toggleMute} />}
       <SteppedAwayToast />
       {permissionsOpen && (
         <PermissionSettings
           permissions={permissions}
           onUpdatePermissions={handleUpdatePermissions}
           onClose={handleClosePermissions}
+        />
+      )}
+      {volumeOverlayOpen && controlsVisible && (
+        <VolumeOverlay
+          participants={participants.filter((p) => participantId != null && p.id !== participantId)}
+          onParticipantVolumeChange={setParticipantVolume}
+          onVoiceGainChange={setVoiceGain}
+          onDismiss={handleCloseVolume}
         />
       )}
     </div>

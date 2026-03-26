@@ -21,6 +21,7 @@ export interface GlassPlayerControlsProps {
   onSeek: (positionMs: number) => void;
   onBack: () => void;
   onOpenPermissions?: () => void;
+  onVolumePress?: () => void;
   subtitlesEnabled?: boolean;
   onSubtitleToggle?: () => void;
   steppedAwayParticipantIds?: string[];
@@ -56,6 +57,7 @@ export function GlassPlayerControls({
   onSeek,
   onBack,
   onOpenPermissions,
+  onVolumePress,
   subtitlesEnabled = false,
   onSubtitleToggle,
   steppedAwayParticipantIds = [],
@@ -188,6 +190,14 @@ export function GlassPlayerControls({
               onClick={onSubtitleToggle}
             >
               CC
+            </button>
+            <button
+              type="button"
+              onClick={onVolumePress}
+              style={iconButtonStyle}
+              aria-label="Volume controls"
+            >
+              🔊
             </button>
             {isHost && onOpenPermissions && (
               <button type="button" onClick={onOpenPermissions} style={iconButtonStyle} aria-label="Permission settings">

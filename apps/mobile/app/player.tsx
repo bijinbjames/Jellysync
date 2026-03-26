@@ -9,6 +9,7 @@ import { movieStore } from '../src/lib/movie';
 import { roomStore } from '../src/lib/room';
 import { authStore } from '../src/lib/auth';
 import { syncStore } from '../src/lib/sync';
+import { voiceStore } from '../src/lib/voice';
 import {
   VideoPlayerView,
   useVideoPlayer,
@@ -19,7 +20,9 @@ import {
 } from '../src/features/player';
 import { useSteppedAway } from '../src/features/player/hooks/use-stepped-away.js';
 import { SteppedAwayToast } from '../src/features/player/components/stepped-away-toast.js';
-import { useVoice } from '../src/features/voice/index.js';
+import { useVoice, useMicToggle } from '../src/features/voice/index.js';
+import { MicToggleFAB } from '../src/features/player/components/mic-toggle-fab.js';
+import { VolumeOverlay } from '../src/features/player/components/volume-overlay.js';
 
 export default function PlayerScreen() {
   const router = useRouter();
@@ -28,6 +31,8 @@ export default function PlayerScreen() {
   const roomCode = useStore(roomStore, (s) => s.roomCode);
   const hostId = useStore(roomStore, (s) => s.hostId);
   const participants = useStore(roomStore, (s) => s.participants);
+  const participantId = useStore(roomStore, (s) => s.participantId);
+  const isVoiceEnabled = useStore(voiceStore, (s) => s.isVoiceEnabled);
   const serverUrl = useStore(authStore, (s) => s.serverUrl);
   const token = useStore(authStore, (s) => s.token);
   const isPlaying = useStore(syncStore, (s) => s.isPlaying);
@@ -41,6 +46,7 @@ export default function PlayerScreen() {
   const userId = useStore(authStore, (s) => s.userId);
   const prevMovieIdRef = useRef<string | null>(selectedMovie?.id ?? null);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const [volumeOverlayOpen, setVolumeOverlayOpen] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -77,7 +83,8 @@ export default function PlayerScreen() {
   const { requestPlay, requestPause, requestSeek, sendPermissionUpdate } = usePlaybackSync(playerInterface);
   const { controlsVisible, toggle, resetTimer, fadeAnim: controlsFadeAnim } = useControlsVisibility();
   useSteppedAway();
-  useVoice();
+  const { managerRef } = useVoice();
+  const { isMuted, toggleMute } = useMicToggle(managerRef);
 
   // Extract subtitle tracks from movie's MediaSources
   useEffect(() => {
@@ -118,6 +125,29 @@ export default function PlayerScreen() {
 
   const handleClosePermissions = useCallback(() => {
     setPermissionsOpen(false);
+  }, []);
+
+  // Dismiss volume overlay when controls auto-hide
+  useEffect(() => {
+    if (!controlsVisible) {
+      setVolumeOverlayOpen(false);
+    }
+  }, [controlsVisible]);
+
+  const handleOpenVolume = useCallback(() => {
+    setVolumeOverlayOpen(true);
+  }, []);
+
+  const handleCloseVolume = useCallback(() => {
+    setVolumeOverlayOpen(false);
+  }, []);
+
+  const handleParticipantVolumeChange = useCallback((pId: string, vol: number) => {
+    voiceStore.getState().setVolume(pId, vol);
+  }, []);
+
+  const handleVoiceGainChange = useCallback((gain: number) => {
+    voiceStore.getState().setVoiceGain(gain);
   }, []);
 
   const handleUpdatePermissions = useCallback((newPermissions: ParticipantPermissions) => {
@@ -167,11 +197,13 @@ export default function PlayerScreen() {
           onSeek={requestSeek}
           onBack={() => router.back()}
           onOpenPermissions={isHost ? handleOpenPermissions : undefined}
+          onVolumePress={handleOpenVolume}
           subtitlesEnabled={subtitlesEnabled}
           onSubtitleToggle={handleSubtitleToggle}
           steppedAwayParticipantIds={steppedAwayParticipantIds}
         />
       </Animated.View>
+      {isVoiceEnabled && <MicToggleFAB isMuted={isMuted} onToggle={toggleMute} />}
       <SteppedAwayToast />
       <PermissionSettings
         visible={permissionsOpen}
@@ -179,6 +211,14 @@ export default function PlayerScreen() {
         onUpdatePermissions={handleUpdatePermissions}
         onClose={handleClosePermissions}
       />
+      {volumeOverlayOpen && controlsVisible && (
+        <VolumeOverlay
+          participants={participants.filter((p) => participantId != null && p.id !== participantId)}
+          onParticipantVolumeChange={handleParticipantVolumeChange}
+          onVoiceGainChange={handleVoiceGainChange}
+          onDismiss={handleCloseVolume}
+        />
+      )}
     </Animated.View>
   );
 }

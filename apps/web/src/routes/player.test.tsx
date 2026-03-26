@@ -14,12 +14,35 @@ vi.mock('@jellysync/shared', async (importOriginal) => {
   };
 });
 
+vi.mock('../lib/voice.js', () => {
+  const stableVoiceState = { volumeLevels: new Map<string, number>(), voiceGain: 1.0 };
+  return {
+    voiceStore: {
+      getState: () => stableVoiceState,
+      subscribe: vi.fn((_listener: unknown, _selector: unknown, _equalityFn: unknown) => () => {}),
+    },
+  };
+});
+
+vi.mock('../features/player/components/volume-overlay.js', () => ({
+  VolumeOverlay: () => null,
+}));
+
 vi.mock('../features/player/hooks/use-stepped-away.js', () => ({
   useSteppedAway: vi.fn(),
 }));
 
 vi.mock('../features/player/components/stepped-away-toast.js', () => ({
   SteppedAwayToast: () => null,
+}));
+
+vi.mock('../features/voice/index.js', () => ({
+  useVoice: () => ({ managerRef: { current: null }, setParticipantVolume: vi.fn(), setVoiceGain: vi.fn() }),
+  useMicToggle: () => ({ isMuted: false, toggleMute: vi.fn() }),
+}));
+
+vi.mock('../features/player/components/mic-toggle-fab.js', () => ({
+  MicToggleFAB: () => null,
 }));
 
 vi.mock('../features/player', () => ({

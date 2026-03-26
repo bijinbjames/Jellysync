@@ -38,12 +38,6 @@ generated: 2026-03-22
 last_updated: 2026-03-26
 # last_updated auto-set by dev-story workflow
 # last_updated auto-set by create-story workflow
-# last_updated auto-set by dev-story workflow
-# last_updated auto-set by create-story workflow
-# last_updated auto-set by dev-story workflow
-# last_updated auto-set by create-story workflow
-# last_updated auto-set by dev-story workflow
-# last_updated auto-set by create-story workflow
 project: myapp
 project_key: NOKEY
 tracking_system: file-system
@@ -86,11 +80,11 @@ development_status:
   epic-4-retrospective: optional
 
   # Epic 5: Voice Chat & Audio
-  epic-5: in-progress
+  epic-5: done
   5-1-webrtc-voice-connection-and-signaling: done
-  5-2-mic-toggle-and-mictogglefab: backlog
-  5-3-per-participant-volume-control-and-audio-mixing: backlog
-  5-4-background-audio-on-mobile: backlog
+  5-2-mic-toggle-and-mictogglefab: done
+  5-3-per-participant-volume-control-and-audio-mixing: done
+  5-4-background-audio-on-mobile: done
   epic-5-retrospective: optional
 
   # Epic 6: Cross-Platform Polish & Deployment

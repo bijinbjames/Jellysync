@@ -4,6 +4,7 @@ import { useStore } from 'zustand';
 import { authStore } from '../../lib/auth';
 import { roomStore } from '../../lib/room';
 import { movieStore } from '../../lib/movie';
+import { voiceStore } from '../../lib/voice';
 import { useWs } from '../../shared/providers/websocket-provider';
 import { createWsMessage, ROOM_MESSAGE_TYPE, SYNC_MESSAGE_TYPE, ROOM_CONFIG, ERROR_CODE, type WsMessage, type RoomStatePayload } from '@jellysync/shared';
 import { RoomCodeDisplay } from '../../features/room/components/room-code-display';
@@ -17,8 +18,11 @@ export default function RoomLobbyPage() {
 
   const roomCode = useStore(roomStore, (s) => s.roomCode);
   const participants = useStore(roomStore, (s) => s.participants);
+  const participantId = useStore(roomStore, (s) => s.participantId);
   const isHost = useStore(roomStore, (s) => s.isHost);
   const selectedMovie = useStore(movieStore, (s) => s.selectedMovie);
+  const isMuted = useStore(voiceStore, (s) => s.isMuted);
+  const peerMutedState = useStore(voiceStore, (s) => s.peerMutedState);
 
   const [autoJoining, setAutoJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | false>(false);
@@ -259,6 +263,7 @@ export default function RoomLobbyPage() {
                 key={p.id}
                 variant={p.isHost ? 'host' : 'participant'}
                 displayName={p.displayName}
+                isMuted={p.id === participantId ? isMuted : peerMutedState.get(p.id)}
               />
             ))}
           </div>

@@ -27,6 +27,7 @@ import {
 import { createSyncHandler } from '../sync/sync-handler.js';
 import { createPermissionHandler } from '../rooms/permissions.js';
 import { createSteppedAwayHandler } from '../rooms/stepped-away.js';
+import { createMicStateHandler } from '../rooms/mic-state.js';
 import { createSignalingHandler } from './signaling-handler.js';
 
 const MAX_DISPLAY_NAME_LENGTH = 50;
@@ -107,6 +108,13 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
   });
 
   const steppedAwayHandler = createSteppedAwayHandler({
+    roomManager,
+    getParticipantId: (socket) => connectionToParticipant.get(socket),
+    sendTo,
+    broadcastToRoom,
+  });
+
+  const micStateHandler = createMicStateHandler({
     roomManager,
     getParticipantId: (socket) => connectionToParticipant.get(socket),
     sendTo,
@@ -426,6 +434,8 @@ export function registerWebSocketHandler(server: FastifyInstance, roomManager: R
           steppedAwayHandler.handleSteppedAway(socket, data);
         } else if (data.type === PARTICIPANT_MESSAGE_TYPE.RETURNED) {
           steppedAwayHandler.handleReturned(socket, data);
+        } else if (data.type === PARTICIPANT_MESSAGE_TYPE.MIC_STATE) {
+          micStateHandler.handleMicState(socket, data);
         } else {
           permissionHandler.handleParticipantMessage(socket, data);
         }
