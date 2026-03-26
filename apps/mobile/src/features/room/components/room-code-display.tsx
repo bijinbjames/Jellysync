@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { View, Text, Animated } from 'react-native';
+import { View, Text, Animated, Pressable } from 'react-native';
 import { useShareRoom } from '../hooks/use-share-room';
 
 interface RoomCodeDisplayProps {
@@ -53,27 +53,27 @@ export function RoomCodeDisplay({ code }: RoomCodeDisplayProps) {
       </View>
 
       <View className="mt-6 gap-3">
-        <View
-          className="gradient-primary rounded-xl min-h-[48px] items-center justify-center"
+        <Pressable
+          onPress={shareRoom}
           accessibilityRole="button"
           accessibilityLabel="Share room link"
+          className="gradient-primary rounded-xl min-h-[48px] items-center justify-center"
         >
-          <Text
-            className="text-surface-container-lowest font-display text-sm font-bold"
-            onPress={shareRoom}
-          >
+          <Text className="text-surface-container-lowest font-display text-sm font-bold">
             Share Link
           </Text>
-        </View>
+        </Pressable>
 
-        <Text
-          className="text-primary font-body text-sm text-center py-2"
+        <Pressable
           onPress={copyCode}
           accessibilityRole="button"
           accessibilityLabel={copied ? 'Code copied' : 'Copy room code'}
+          className="min-h-[48px] items-center justify-center"
         >
-          {copied ? '\u2713 Copied!' : 'Copy Code'}
-        </Text>
+          <Text className="text-primary font-body text-sm text-center">
+            {copied ? '\u2713 Copied!' : 'Copy Code'}
+          </Text>
+        </Pressable>
       </View>
     </View>
   );

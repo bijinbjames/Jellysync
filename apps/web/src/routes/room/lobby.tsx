@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useStore } from 'zustand';
 import { authStore } from '../../lib/auth';
@@ -9,8 +9,6 @@ import { createWsMessage, ROOM_MESSAGE_TYPE, ROOM_CONFIG, ERROR_CODE } from '@je
 import { RoomCodeDisplay } from '../../features/room/components/room-code-display';
 import { ParticipantChip } from '../../features/room/components/participant-chip';
 import { MovieBriefCard } from '../../features/room/components/movie-brief-card';
-
-const VISIBLE_SLOTS = 6;
 
 export default function RoomLobbyPage() {
   const { code } = useParams<{ code: string }>();
@@ -26,14 +24,13 @@ export default function RoomLobbyPage() {
   const [joinError, setJoinError] = useState<string | false>(false);
   const [roomClosed, setRoomClosed] = useState(false);
   const [movieNotification, setMovieNotification] = useState<string | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const joinSentRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevMovieIdRef = useRef<string | null>(selectedMovie?.id ?? null);
   const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connectionState = useStore(roomStore, (s) => s.connectionState);
-
-  const emptySlots = Math.max(0, VISIBLE_SLOTS - participants.length);
 
   const canStartMovie = selectedMovie !== null && participants.length >= 2;
 
@@ -135,6 +132,16 @@ export default function RoomLobbyPage() {
     }
   }, [roomCode, code, navigate]);
 
+  // Escape key dismisses cancel confirmation
+  useEffect(() => {
+    if (!showCancelConfirm) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowCancelConfirm(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showCancelConfirm]);
+
   // Room closed by server
   if (roomClosed) {
     return (
@@ -201,7 +208,7 @@ export default function RoomLobbyPage() {
       <div className="px-6 pt-6 pb-2 flex items-center justify-between max-w-screen-xl mx-auto">
         <button
           type="button"
-          onClick={handleLeaveRoom}
+          onClick={() => setShowCancelConfirm(true)}
           aria-label="Leave room and go back"
           className="min-h-[48px] min-w-[48px] flex items-center justify-center cursor-pointer text-on-surface-variant hover:text-on-surface transition-colors"
         >
@@ -217,6 +224,8 @@ export default function RoomLobbyPage() {
       </div>
 
       <main className="px-6 pb-12 pt-4 max-w-screen-xl mx-auto flex flex-col gap-8">
+        <MovieBriefCard onChangeMovie={isHost ? handleBrowseLibrary : undefined} />
+
         <RoomCodeDisplay code={displayCode} />
 
         <div className="flex flex-col gap-3">
@@ -231,9 +240,6 @@ export default function RoomLobbyPage() {
                 displayName={p.displayName}
               />
             ))}
-            {Array.from({ length: emptySlots }).map((_, i) => (
-              <ParticipantChip key={`empty-${i}`} variant="empty" />
-            ))}
           </div>
         </div>
 
@@ -241,19 +247,6 @@ export default function RoomLobbyPage() {
           <div className="bg-secondary/10 rounded-lg px-4 py-2">
             <span className="text-on-surface font-body text-sm">{movieNotification}</span>
           </div>
-        )}
-
-        <MovieBriefCard />
-
-        {isHost && (
-          <button
-            type="button"
-            onClick={handleBrowseLibrary}
-            aria-label={selectedMovie ? 'Change Movie' : 'Browse Library'}
-            className="min-h-[48px] text-on-surface-variant font-body text-sm font-medium cursor-pointer hover:text-on-surface transition-colors"
-          >
-            {selectedMovie ? 'Change Movie' : 'Browse Library'}
-          </button>
         )}
 
         {isHost && (
@@ -275,7 +268,7 @@ export default function RoomLobbyPage() {
         <div className="pt-4 flex justify-center">
           <button
             type="button"
-            onClick={handleLeaveRoom}
+            onClick={() => setShowCancelConfirm(true)}
             aria-label="Cancel room"
             className="min-h-[48px] text-error font-body text-sm font-medium cursor-pointer hover:opacity-80 transition-opacity"
           >
@@ -283,6 +276,40 @@ export default function RoomLobbyPage() {
           </button>
         </div>
       </main>
+
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowCancelConfirm(false)}
+            role="presentation"
+          />
+          <div className="relative w-full max-w-lg backdrop-blur-xl bg-surface-container-high/80 border border-outline-variant/15 rounded-t-2xl px-6 pt-6 pb-10" role="dialog" aria-modal="true" aria-label={isHost ? 'Cancel this room?' : 'Leave this room?'}>
+            <h3 className="text-on-surface font-heading text-lg font-bold">
+              {isHost ? 'Cancel this room?' : 'Leave this room?'}
+            </h3>
+            <p className="text-on-surface-variant font-body text-sm mt-1">
+              {isHost ? 'All participants will be disconnected' : 'You can rejoin with the room code'}
+            </p>
+            <button
+              type="button"
+              onClick={handleLeaveRoom}
+              aria-label="Confirm cancel room"
+              className="w-full bg-error/20 rounded-md min-h-[48px] mt-6 text-error font-display text-base font-bold cursor-pointer"
+            >
+              {isHost ? 'Cancel Room' : 'Leave Room'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCancelConfirm(false)}
+              aria-label="Stay in room"
+              className="w-full min-h-[48px] mt-2 text-on-surface-variant font-body text-sm font-medium cursor-pointer hover:text-on-surface transition-colors"
+            >
+              Stay
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

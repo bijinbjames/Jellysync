@@ -62,9 +62,9 @@ export default function LibraryScreen() {
     if (creatingRef.current) return;
     creatingRef.current = true;
 
-    // Create a new room
+    // Create a new room with selected movie
     const username = authStore.getState().username;
-    send(createWsMessage(ROOM_MESSAGE_TYPE.CREATE, { displayName: username ?? 'User' }));
+    send(createWsMessage(ROOM_MESSAGE_TYPE.CREATE, { displayName: username ?? 'User', movie }));
   };
 
   const handleConfirmSwap = () => {

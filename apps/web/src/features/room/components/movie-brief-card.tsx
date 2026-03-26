@@ -3,15 +3,19 @@ import { getImageUrl, formatRuntime } from '@jellysync/shared';
 import { movieStore } from '../../../lib/movie';
 import { authStore } from '../../../lib/auth';
 
-export function MovieBriefCard() {
+interface MovieBriefCardProps {
+  onChangeMovie?: () => void;
+}
+
+export function MovieBriefCard({ onChangeMovie }: MovieBriefCardProps) {
   const selectedMovie = useStore(movieStore, (s) => s.selectedMovie);
   const serverUrl = useStore(authStore, (s) => s.serverUrl);
 
   if (!selectedMovie) {
-    return (
+    const content = (
       <div
         className="flex bg-surface-container-low rounded-2xl p-4"
-        aria-label="No movie selected"
+        {...(!onChangeMovie && { 'aria-label': 'No movie selected' })}
       >
         <div className="w-16 h-24 rounded-lg border border-dashed border-outline-variant/30 flex items-center justify-center shrink-0">
           <span className="text-outline-variant text-2xl">{'\uD83C\uDFAC'}</span>
@@ -21,11 +25,26 @@ export function MovieBriefCard() {
             No movie selected
           </span>
           <span className="text-outline font-body text-xs mt-1">
-            Browse the library to pick a movie
+            {onChangeMovie ? 'Click to browse the library' : 'Browse the library to pick a movie'}
           </span>
         </div>
       </div>
     );
+
+    if (onChangeMovie) {
+      return (
+        <button
+          type="button"
+          onClick={onChangeMovie}
+          aria-label="Browse Library"
+          className="w-full text-left cursor-pointer"
+        >
+          {content}
+        </button>
+      );
+    }
+
+    return content;
   }
 
   const posterUrl = selectedMovie.imageTag && serverUrl
@@ -65,6 +84,16 @@ export function MovieBriefCard() {
           </span>
         )}
       </div>
+      {onChangeMovie && (
+        <button
+          type="button"
+          onClick={onChangeMovie}
+          aria-label="Change Movie"
+          className="min-h-[48px] min-w-[48px] flex items-center justify-center ml-2 shrink-0 text-on-surface-variant font-body text-xs font-medium cursor-pointer hover:text-on-surface transition-colors"
+        >
+          Change
+        </button>
+      )}
     </div>
   );
 }

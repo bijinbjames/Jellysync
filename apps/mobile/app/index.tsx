@@ -2,14 +2,21 @@ import { ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useStore } from 'zustand';
 import { authStore } from '../src/lib/auth';
+import { roomStore } from '../src/lib/room';
+import { movieStore } from '../src/lib/movie';
 import { GlassHeader } from '../src/shared/components/glass-header';
 import { ActionCard } from '../src/shared/components/action-card';
 
 export default function HomeScreen() {
   const username = useStore(authStore, (s) => s.username);
   const serverUrl = useStore(authStore, (s) => s.serverUrl);
-  const logout = useStore(authStore, (s) => s.logout);
   const router = useRouter();
+
+  const handleLogout = () => {
+    roomStore.getState().clearRoom();
+    movieStore.getState().clearMovie();
+    authStore.getState().logout();
+  };
 
   const handleCreateRoom = () => {
     router.push('/library');
@@ -25,7 +32,7 @@ export default function HomeScreen() {
         variant="home"
         title={`Hey, ${username ?? 'User'}`}
         subtitle={serverUrl ?? 'Not connected'}
-        onAction={logout}
+        onAction={handleLogout}
       />
       <ScrollView
         className="flex-1"

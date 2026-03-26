@@ -425,7 +425,7 @@ The design direction for JellySync was established through the existing UI desig
 
 3. **Library Browser** — Glassmorphic fixed header, horizontal category chip scroller, 3-column poster grid with rim lighting effect. Bottom navigation bar present (Discover, Rooms, Watchlist, Settings). Shimmer loading states for unloaded content.
 
-4. **Room Lobby** — Movie brief card (poster thumbnail + metadata), hero room code display ("JLY-8X") with animated pulse dot, Share Link gradient CTA + Copy Code text action, participant list with host indicator and empty slot placeholders, disabled "Start Movie" button until participants join.
+4. **Room Lobby** — MovieBriefCard with "Change Movie" action (poster thumbnail + metadata + tertiary change button), hero room code display ("JLY-8X") with animated pulse dot, Share Link gradient CTA + Copy Code text action, dynamic participant list (host shown immediately, guests appear with entrance animation as they join — no empty slot placeholders), "Start Movie" button disabled until at least 1 guest has joined, "Cancel Room" tertiary action with confirmation dialog.
 
 5. **Join Room** — Back navigation, centered instructional header with group icon, OTP-style 6-character code input boxes, gradient Join Room button, "or" divider with deep link alternative. Mobile keyboard visible.
 
@@ -858,8 +858,8 @@ flowchart TD
 
 **Purpose:** Compact movie reference in the Room Lobby — confirms what movie is selected.
 **Anatomy:** Horizontal card (`surface_container_low`, `rounded-lg`, `p-4`), poster thumbnail (64x96px, `rounded-md`, ghost border), title (Manrope bold xl), metadata (`secondary` label — year + runtime).
-**States:** Static display, no interaction.
-**Accessibility:** Movie title and metadata announced as a group.
+**States:** Static display in player context. In Room Lobby: interactive — tapping "Change Movie" tertiary button navigates to Library for movie swap. When host changes movie, all guests receive a real-time update with the new movie card animating in.
+**Accessibility:** Movie title and metadata announced as a group. "Change Movie" button labeled for screen readers.
 
 ### Component Implementation Strategy
 
@@ -884,7 +884,7 @@ All custom components built as cross-platform React/React Native components cons
 - Shimmer loading states for PosterGrid
 - Seek bar buffer visualization
 - Participant avatar stack with overflow
-- Empty slot placeholders in lobby
+- Participant entrance animations in lobby
 
 **Phase 3 — Enhancement:**
 - Connection quality subtle indicators (Phase 2 PRD feature)
@@ -983,7 +983,7 @@ All custom components built as cross-platform React/React Native components cons
 - **General rule:** Never show a blank screen. Always show the structural layout with shimmer/placeholder content.
 
 #### Empty States
-- **No participants yet (Lobby)** — Dashed-border empty slot chips with "+" icon and "Slot available" text at reduced opacity. Communicates capacity, not emptiness.
+- **No participants yet (Lobby)** — Only the host chip is displayed. No empty slot placeholders. Guests appear dynamically with a subtle slide-in animation as they join. The clean empty state communicates openness rather than unfilled capacity.
 - **Library empty** — Should never happen (Jellyfin server has content), but fallback: centered icon + "No movies found — check your Jellyfin library" text.
 
 ### Modal & Overlay Patterns
@@ -993,7 +993,7 @@ All custom components built as cross-platform React/React Native components cons
 - **Player controls** — Tap-to-reveal overlay, auto-dismiss after 5 seconds. Not a modal — no backdrop dimming beyond the existing video gradient overlays.
 - **Share sheet** — Native OS share sheet. No custom modal. One tap fires the native share picker.
 - **Volume controls** — Inline overlay near the volume icon. Slider appears on tap, dismisses on outside tap. No modal.
-- **Confirmation dialogs** — Almost never used. Movie swap is the one exception: lightweight bottom sheet confirming "Change to [Movie Name]?" with primary and cancel actions.
+- **Confirmation dialogs** — Almost never used. Two exceptions: (1) Movie swap — lightweight bottom sheet confirming "Change to [Movie Name]?" with primary and cancel actions. (2) Cancel Room — lightweight bottom sheet confirming "Cancel this room?" with explanatory text "All participants will be disconnected" and destructive "Cancel Room" + "Keep Room" actions.
 - **No permission pre-modals** — Mic permission uses OS native prompt only. No "JellySync needs your microphone" pre-explanation modal.
 
 ## Responsive Design & Accessibility

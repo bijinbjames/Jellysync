@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ScrollView, View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { ScrollView, View, Text, Pressable, ActivityIndicator, BackHandler } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useStore } from 'zustand';
 import { authStore } from '../../src/lib/auth';
@@ -10,8 +10,6 @@ import { createWsMessage, ROOM_MESSAGE_TYPE, ROOM_CONFIG, ERROR_CODE } from '@je
 import { RoomCodeDisplay } from '../../src/features/room/components/room-code-display';
 import { ParticipantChip } from '../../src/features/room/components/participant-chip';
 import { MovieBriefCard } from '../../src/features/room/components/movie-brief-card';
-
-const VISIBLE_SLOTS = 6;
 
 export default function RoomLobbyScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
@@ -27,14 +25,13 @@ export default function RoomLobbyScreen() {
   const [joinError, setJoinError] = useState<string | false>(false);
   const [roomClosed, setRoomClosed] = useState(false);
   const [movieNotification, setMovieNotification] = useState<string | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const joinSentRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevMovieIdRef = useRef<string | null>(selectedMovie?.id ?? null);
   const notificationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connectionState = useStore(roomStore, (s) => s.connectionState);
-
-  const emptySlots = Math.max(0, VISIBLE_SLOTS - participants.length);
 
   const canStartMovie = selectedMovie !== null && participants.length >= 2;
 
@@ -140,6 +137,22 @@ export default function RoomLobbyScreen() {
     }
   }, [roomCode, code, router]);
 
+  // Android back button shows confirmation instead of navigating away
+  useEffect(() => {
+    if (!showCancelConfirm) {
+      const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+        setShowCancelConfirm(true);
+        return true;
+      });
+      return () => sub.remove();
+    }
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setShowCancelConfirm(false);
+      return true;
+    });
+    return () => sub.remove();
+  }, [showCancelConfirm]);
+
   // Room closed by server
   if (roomClosed) {
     return (
@@ -205,7 +218,7 @@ export default function RoomLobbyScreen() {
     <View className="flex-1 bg-surface">
       <View className="px-6 pt-14 pb-2 flex-row items-center justify-between">
         <Pressable
-          onPress={handleLeaveRoom}
+          onPress={() => setShowCancelConfirm(true)}
           accessibilityRole="button"
           accessibilityLabel="Leave room and go back"
           className="min-h-[48px] min-w-[48px] items-center justify-center"
@@ -222,6 +235,8 @@ export default function RoomLobbyScreen() {
         className="flex-1"
         contentContainerClassName="px-6 pb-12 pt-4 gap-8"
       >
+        <MovieBriefCard onChangeMovie={isHost ? handleBrowseLibrary : undefined} />
+
         <RoomCodeDisplay code={displayCode} />
 
         <View className="gap-3">
@@ -236,9 +251,6 @@ export default function RoomLobbyScreen() {
                 displayName={p.displayName}
               />
             ))}
-            {Array.from({ length: emptySlots }).map((_, i) => (
-              <ParticipantChip key={`empty-${i}`} variant="empty" />
-            ))}
           </View>
         </View>
 
@@ -246,21 +258,6 @@ export default function RoomLobbyScreen() {
           <View className="bg-secondary/10 rounded-lg px-4 py-2">
             <Text className="text-on-surface font-body text-sm">{movieNotification}</Text>
           </View>
-        )}
-
-        <MovieBriefCard />
-
-        {isHost && (
-          <Pressable
-            onPress={handleBrowseLibrary}
-            accessibilityRole="button"
-            accessibilityLabel={selectedMovie ? 'Change Movie' : 'Browse Library'}
-            className="min-h-[48px] items-center justify-center"
-          >
-            <Text className="text-on-surface-variant font-body text-sm font-medium">
-              {selectedMovie ? 'Change Movie' : 'Browse Library'}
-            </Text>
-          </Pressable>
         )}
 
         {isHost && (
@@ -281,7 +278,7 @@ export default function RoomLobbyScreen() {
 
         <View className="pt-4">
           <Pressable
-            onPress={handleLeaveRoom}
+            onPress={() => setShowCancelConfirm(true)}
             accessibilityRole="button"
             accessibilityLabel="Cancel room"
             className="min-h-[48px] items-center justify-center"
@@ -292,6 +289,45 @@ export default function RoomLobbyScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      {showCancelConfirm && (
+        <View className="absolute inset-0 z-50">
+          <Pressable
+            onPress={() => setShowCancelConfirm(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss"
+            className="absolute inset-0 bg-black/50"
+          />
+          <View className="absolute bottom-0 left-0 right-0 bg-surface-container-high/80 border-t border-outline-variant/15 rounded-t-2xl px-6 pt-6 pb-10">
+            <Text className="text-on-surface font-heading text-lg font-bold">
+              {isHost ? 'Cancel this room?' : 'Leave this room?'}
+            </Text>
+            <Text className="text-on-surface-variant font-body text-sm mt-1">
+              {isHost ? 'All participants will be disconnected' : 'You can rejoin with the room code'}
+            </Text>
+            <Pressable
+              onPress={handleLeaveRoom}
+              accessibilityRole="button"
+              accessibilityLabel="Confirm cancel room"
+              className="bg-error/20 rounded-md min-h-[48px] items-center justify-center mt-6"
+            >
+              <Text className="text-error font-display text-base font-bold">
+                {isHost ? 'Cancel Room' : 'Leave Room'}
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setShowCancelConfirm(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Keep room"
+              className="min-h-[48px] items-center justify-center mt-2"
+            >
+              <Text className="text-on-surface-variant font-body text-sm font-medium">
+                Stay
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
