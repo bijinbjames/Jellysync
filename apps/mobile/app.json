@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "JellySync",
-    "slug": "jellysync",
+    "slug": "mobile",
     "scheme": "jellysync",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -73,6 +73,7 @@
       "eas": {
         "projectId": "cf20264c-0b57-4d3f-9389-180f248bafc7"
       }
-    }
+    },
+    "owner": "bijinbjames"
   }
 }
