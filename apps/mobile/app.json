@@ -19,7 +19,11 @@
         "UIBackgroundModes": [
           "audio",
           "voip"
-        ]
+        ],
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSAllowsLocalNetworking": true
+        }
       },
       "bitcode": false
     },
@@ -53,6 +57,14 @@
       "expo-font",
       "expo-router",
       "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
       [
         "expo-video",
         {

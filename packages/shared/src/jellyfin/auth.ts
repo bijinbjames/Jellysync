@@ -53,7 +53,7 @@ export async function authenticateWithJellyfin(
 function normalizeServerUrl(url: string): string {
   let normalized = url.trim();
   if (!/^https?:\/\//i.test(normalized)) {
-    normalized = `https://${normalized}`;
+    normalized = `http://${normalized}`;
   }
   return normalized.replace(/\/+$/, '');
 }
