@@ -7,6 +7,7 @@ import { GlassHeader } from '../shared/components/glass-header';
 import { SwapConfirmSheet } from '../shared/components/swap-confirm-sheet';
 import { CategoryChips } from '../features/library/components/category-chips';
 import { PosterGrid } from '../features/library/components/poster-grid';
+import { LibraryNav } from '../features/library/components/library-nav';
 import { useLibrary } from '../features/library/hooks/use-library';
 import { useWs } from '../shared/providers/websocket-provider';
 import { movieStore } from '../lib/movie';
@@ -89,28 +90,31 @@ export default function LibraryPage() {
         title="Library"
         onBack={() => navigate(-1)}
       />
-      {error ? (
-        <div className="flex flex-col items-center justify-center py-20 px-6">
-          <p className="text-error font-body text-sm text-center">
-            {error.message}
-          </p>
-        </div>
-      ) : (
-        <>
-          <CategoryChips
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onSelect={setCategory}
-            isLoading={isLoading}
-          />
-          <PosterGrid
-            movies={movies}
-            serverUrl={serverUrl}
-            isLoading={isLoading}
-            onMoviePress={handleMovieSelect}
-          />
-        </>
-      )}
+      <div className="max-w-screen-xl mx-auto pb-24 lg:pb-12">
+        {error ? (
+          <div className="flex flex-col items-center justify-center py-20 px-6">
+            <p className="text-error font-body text-sm text-center">
+              {error.message}
+            </p>
+          </div>
+        ) : (
+          <>
+            <CategoryChips
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onSelect={setCategory}
+              isLoading={isLoading}
+            />
+            <PosterGrid
+              movies={movies}
+              serverUrl={serverUrl}
+              isLoading={isLoading}
+              onMoviePress={handleMovieSelect}
+            />
+          </>
+        )}
+      </div>
+      {!isSwapContext && <LibraryNav />}
       <SwapConfirmSheet
         movieName={pendingMovie?.name ?? ''}
         onConfirm={handleConfirmSwap}
