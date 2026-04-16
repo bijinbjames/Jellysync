@@ -90,7 +90,7 @@ development_status:
   # Epic 6: Cross-Platform Polish & Deployment
   epic-6: in-progress
   6-1-web-responsive-adaptation: done
-  6-2-accessibility-audit-and-compliance: backlog
+  6-2-accessibility-audit-and-compliance: ready-for-dev
   6-3-cross-platform-parity-testing-and-fixes: backlog
   6-4-docker-compose-deployment: backlog
   epic-6-retrospective: optional

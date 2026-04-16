@@ -7,7 +7,14 @@
       "Bash(git checkout:*)",
       "Bash(git add:*)",
       "Bash(pnpm --filter @jellysync/shared lint)",
-      "Bash(pnpm --filter @jellysync/web lint)"
+      "Bash(pnpm --filter @jellysync/web lint)",
+      "Bash(git stash:*)",
+      "Bash(node_modules/.bin/vitest run:*)",
+      "Bash(npx vitest:*)",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(npx eslint:*)",
+      "Read(//dev/**)",
+      "Bash(git push:*)"
     ]
   }
 }
